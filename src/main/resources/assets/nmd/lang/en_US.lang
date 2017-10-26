@@ -1,0 +1,7 @@
+nmd.blacklist.add=%s successfully added to blacklist
+nmd.blacklist.remove=%s successfully removed from blacklist
+nmd.blacklist.null=No held item detected
+nmd_blacklist=Blacklist an item from pickup
+
+nmd.command.blacklist.usage=/nmd blacklist
+nmd.command.main.usage=/nmd <blacklist>
