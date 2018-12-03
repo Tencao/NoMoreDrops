@@ -2,11 +2,9 @@ package com.tencao.nmd.events
 
 import be.bluexin.saomclib.capabilities.PartyCapability
 import com.tencao.nmd.NMDCore
-import com.tencao.nmd.capability.getNMDData
 import com.tencao.nmd.util.PlayerHelper
 import net.minecraft.entity.EntityCreature
 import net.minecraft.entity.player.EntityPlayerMP
-import net.minecraft.item.ItemStack
 import net.minecraftforge.event.entity.living.*
 import net.minecraftforge.fml.common.eventhandler.EventPriority
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
@@ -44,16 +42,9 @@ class LivingEventHandler {
             if (player != null && PlayerHelper.isPlayer(player)) {
                 val party = player.getCapability(PartyCapability.CAP_INSTANCE, null)!!.party
                 if (party != null) {
-                    event.drops.forEach { item ->
-                        val partyMembers = party.members.filter({ pl -> pl.inventory.firstEmptyStack != -1 && !pl.getNMDData().isBlackListed(item.entityItem) })
-                        for (i in 0 until item.entityItem.count) {
-                            partyMembers[mob.world.rand.nextInt(partyMembers.size - 1)].inventory.addItemStackToInventory(ItemStack(item.entityItem.item, 1))
-                            item.entityItem.shrink(1)
-                        }
-                    }
-
+                    event.drops.removeAll{PlayerHelper.addDropsToParty(player, it.entityItem, true) && it.isDead}
                 } else
-                    event.drops.removeAll{ !player.getNMDData().isBlackListed(it.entityItem) && player.inventory.addItemStackToInventory(it.entityItem) }
+                    event.drops.removeAll{PlayerHelper.addDropsToPlayer(player, it.entityItem, false) && it.isDead}
             }
         }
     }
@@ -82,7 +73,8 @@ class LivingEventHandler {
             if (player != null && PlayerHelper.isPlayer(player)) {
                 val party = player.getCapability(PartyCapability.CAP_INSTANCE, null)!!.party
                 if (party != null) {
-                    party.members.forEach { pl -> pl.addExperience(event.droppedExperience / party.members.size) }
+                    val partyMembers = party.members.filter { pl -> player.getDistanceToEntity(pl) <= 128}
+                    partyMembers.forEach { pl -> pl.addExperience(event.droppedExperience / party.members.count()) }
                 } else
                     player.addExperience(event.droppedExperience)
                 event.droppedExperience = 0

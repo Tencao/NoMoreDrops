@@ -2,6 +2,7 @@ package com.tencao.nmd.network
 
 import com.tencao.nmd.NMDCore
 import com.tencao.nmd.network.packets.BlackListPKT
+import com.tencao.nmd.network.packets.SoundPKT
 import com.tencao.nmd.util.PlayerHelper
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.player.EntityPlayerMP
@@ -17,6 +18,7 @@ object PacketHandler {
         var disc = 0
         HANDLER.registerMessage(BlackListPKT.Handler::class.java, BlackListPKT::class.java, disc++, Side.CLIENT)
         HANDLER.registerMessage(BlackListPKT.Handler::class.java, BlackListPKT::class.java, disc++, Side.SERVER)
+        HANDLER.registerMessage(SoundPKT.Handler::class.java, SoundPKT::class.java, disc++, Side.CLIENT)
     }
 
     /**

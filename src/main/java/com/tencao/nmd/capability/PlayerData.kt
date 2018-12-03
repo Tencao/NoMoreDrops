@@ -55,6 +55,14 @@ class PlayerData : AbstractEntityCapability() {
         return items
     }
 
+    override val shouldSyncOnDeath = true
+
+    override val shouldSyncOnDimensionChange = true
+
+    override val shouldRestoreOnDeath = true
+
+    override val shouldSendOnLogin = true
+
     class Storage : Capability.IStorage<PlayerData> {
         override fun writeNBT(capability: Capability<PlayerData>?, instance: PlayerData, side: EnumFacing?): NBTBase? {
             val tag = NBTTagCompound()

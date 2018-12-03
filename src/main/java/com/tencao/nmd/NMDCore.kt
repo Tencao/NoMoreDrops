@@ -3,6 +3,7 @@ package com.tencao.nmd
 import be.bluexin.saomclib.capabilities.CapabilitiesHandler
 import com.tencao.nmd.capability.PlayerData
 import com.tencao.nmd.events.BlockEventHandler
+import com.tencao.nmd.events.EntityItemEventHandler
 import com.tencao.nmd.events.LivingEventHandler
 import com.tencao.nmd.network.commands.NMDCommand
 import com.tencao.nmd.util.PlayerHelper
@@ -16,7 +17,7 @@ import org.apache.logging.log4j.Logger
 @Mod(modid = NMDCore.MODID, name = "No More Drops", version = NMDCore.VERSION, dependencies = NMDCore.DEPS)
 object NMDCore {
     const val MODID = "nmd"
-    const val VERSION = "0.1.2"
+    const val VERSION = "0.2.4"
     const val DEPS = "required-after:saomclib@[1.2,)"
     val LOGGER: Logger = LogManager.getLogger(MODID)
 
@@ -33,6 +34,7 @@ object NMDCore {
         LOGGER.info("Setting up events")
         MinecraftForge.EVENT_BUS.register(BlockEventHandler())
         MinecraftForge.EVENT_BUS.register(LivingEventHandler())
+        MinecraftForge.EVENT_BUS.register(EntityItemEventHandler())
     }
 
     @Mod.EventHandler
