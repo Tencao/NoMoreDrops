@@ -30,7 +30,7 @@ targetCompatibility = 1.8
 minecraft {
     version = "${mc_version}-${forge_version}"
     runDir = "run"
-    mappings = "snapshot_20170526"
+    mappings = "${mappings_version}"
 
 }
 
@@ -85,7 +85,10 @@ processResources
 idea { module { inheritOutputDirs = true } }
 
 jar {
-    from(sourceSets.api.output)
+    classifier = 'universal'
+    manifest {
+        attributes 'FMLAT': 'nmd_at.cfg'
+    }
 }
 
 compileKotlin {

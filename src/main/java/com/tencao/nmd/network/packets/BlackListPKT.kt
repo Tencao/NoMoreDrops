@@ -32,7 +32,7 @@ class BlackListPKT(var items: NonNullList<ItemStack>) : IMessage {
             if (ctx.side.isClient)
                 Minecraft.getMinecraft().addScheduledTask { Minecraft.getMinecraft().player.getNMDData().setItemList(message.items)}
             else
-                ctx.serverHandler.player.mcServer.addScheduledTask { ctx.serverHandler.player.getNMDData().setItemList(message.items)}
+                ctx.serverHandler.player.server.addScheduledTask { ctx.serverHandler.player.getNMDData().setItemList(message.items)}
             return null
         }
     }

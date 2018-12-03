@@ -13,9 +13,7 @@ class BlockEventHandler {
     fun onBlockDrops(e: BlockEvent.HarvestDropsEvent) {
         if (!e.world.isRemote && PlayerHelper.isPlayer(e.harvester)) {
             e.drops.removeAll{PlayerHelper.addDropsToPlayer(e.harvester, it, false) && it.isEmpty}
-            if (e.drops.isNotEmpty()) {
-                e.drops.removeAll{PlayerHelper.addDropsToParty(e.harvester, it, false) && it.isEmpty}
-            }
+            e.drops.removeAll{PlayerHelper.addDropsToParty(e.harvester, it, false) && it.isEmpty}
         }
     }
 
@@ -27,7 +25,6 @@ class BlockEventHandler {
             if (PlayerHelper.isPlayer(player)) {
                 if (tile is IInventory) {
                     val inventory = tile as IInventory
-
                     for (i in 0 until inventory.sizeInventory) {
                         val itemStack = inventory.getStackInSlot(i)
                         if (!itemStack.isEmpty)
@@ -35,14 +32,7 @@ class BlockEventHandler {
                                 inventory.setInventorySlotContents(i, ItemStack.EMPTY)
                     }
                 }
-
-                /*
-                val party = player.getCapability(PartyCapability.CAP_INSTANCE, null)!!.party
-                if (party != null) {
-                    val partyMembers = party.members.filter({ pl -> player.getDistanceToEntity(pl) <= 128 })
-                    partyMembers.forEach { pl -> pl.addExperience(e.expToDrop / party.members.size) }
-                } else*/
-                    player.addExperience(e.expToDrop)
+                player.addExperience(e.expToDrop)
                 e.expToDrop = 0
             }
 

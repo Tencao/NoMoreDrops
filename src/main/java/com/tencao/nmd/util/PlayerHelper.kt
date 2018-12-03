@@ -1,6 +1,7 @@
 package com.tencao.nmd.util
 
 import be.bluexin.saomclib.capabilities.PartyCapability
+import be.bluexin.saomclib.capabilities.getPartyCapability
 import com.tencao.nmd.capability.getNMDData
 import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.player.EntityPlayer
@@ -42,7 +43,7 @@ object PlayerHelper {
      * @param saveSlot If true, will attempt to save one free slot in the players inventory
      */
     fun addDropsToPlayer(player: EntityPlayer, entityItem: EntityItem, saveSlot: Boolean): Boolean {
-        if (!player.getNMDData().isBlackListed(entityItem.entityItem)) {
+        if (!player.getNMDData().isBlackListed(entityItem.item)) {
             return giveItemToPlayer(player, entityItem)
         }
         return false
@@ -56,7 +57,7 @@ object PlayerHelper {
     fun addDropsToParty(player: EntityPlayer, itemStack: ItemStack, leader: Boolean): Boolean{
         val party = player.getCapability(PartyCapability.CAP_INSTANCE, null)!!.party
         if (party != null) {
-            val partyMembers = party.members.filter { pl -> (!leader && party.leader != pl || leader) && !pl.getNMDData().isBlackListed(itemStack) && player.getDistanceToEntity(pl) <= 64}.toMutableList()
+            val partyMembers = party.members.filter { pl -> (!leader && party.leader != pl || leader) && !pl.getNMDData().isBlackListed(itemStack) && player.getDistanceSq(pl) <= squareSum(64)}.toMutableList()
             if (partyMembers.isNotEmpty()) {
                 while (partyMembers.isNotEmpty() && !itemStack.isEmpty){
                     val member = partyMembers[player.world.rand.nextInt(partyMembers.size - 1)]
@@ -71,29 +72,11 @@ object PlayerHelper {
         return false
     }
 
-
-    /*
-    private fun attemptPickUp(entityItem: EntityItem, player: EntityPlayer): Boolean {
-        if (entityItem.isDead || entityItem.entityItem.isEmpty){
-            NMDCore.LOGGER.fatal("Attempted to add null stack to inventory")
-            return true
-        }
-
-        val hook = net.minecraftforge.event.ForgeEventFactory.onItemPickup(entityItem, player)
-        if (hook >= 0) {
-            if ((hook == 1 || player.inventory.addItemStackToInventory(entityItem.entityItem))) {
-                //net.minecraftforge.fml.common.FMLCommonHandler.instance().firePlayerItemPickupEvent(player, entityItem, entityItem.entityItem)
-                player.onItemPickup(entityItem, entityItem.entityItem.count)
-
-                entityItem.setDead()
-
-                player.addStat(StatList.getObjectsPickedUpStats(entityItem.entityItem.item), entityItem.entityItem.count)
-                return true
-            }
-        }
-        entityItem.setDead()
-        return false
-    }*/
+    fun addExpToParty(player: EntityPlayer, exp: Int){
+        val selectedMembers = player.getPartyCapability().party?.members?.filter { player.getDistanceSq(it) <= PlayerHelper.squareSum(128) } ?: sequenceOf(player)
+        val givenExp = exp / selectedMembers.count()// Your version has an exp loss !!
+        selectedMembers.forEach { it.addExperience(givenExp) }
+    }
 
     /**
      * Inserts the given itemstack into the players inventory.
@@ -103,7 +86,7 @@ object PlayerHelper {
      * @param entityItem  The entity item to insert
      */
     fun giveItemToPlayer(player: EntityPlayer, entityItem: EntityItem): Boolean {
-        return giveItemToPlayer(player, entityItem.entityItem)
+        return giveItemToPlayer(player, entityItem.item)
     }
 
     /**
@@ -130,11 +113,11 @@ object PlayerHelper {
         if (remainder.isEmpty || remainder.count != stack.count) {
 
             val entityItem = EntityItem(player.world, player.posX, player.posY, player.posZ, stack)
-            entityItem.entityItem.count = stack.count - remainder.count
+            entityItem.item.count = stack.count - remainder.count
             val hook = net.minecraftforge.event.ForgeEventFactory.onItemPickup(entityItem, player)
 
-            if (hook >= 0 && player.inventory.addItemStackToInventory(entityItem.entityItem)) {
-                player.onItemPickup(entityItem, entityItem.entityItem.count)
+            if (hook >= 0 && player.inventory.addItemStackToInventory(entityItem.item)) {
+                player.onItemPickup(entityItem, entityItem.item.count)
                 entityItem.setDead()
                 world.playSound(player, player.posX, player.posY, player.posZ,
                         SoundEvents.ENTITY_ITEM_PICKUP, SoundCategory.PLAYERS, 0.2f, ((world.rand.nextFloat() - world.rand.nextFloat()) * 0.7f + 1.0f) * 2.0f)
@@ -158,5 +141,13 @@ object PlayerHelper {
             remainder = ItemHandlerHelper.insertItemStacked(inventory, remainder, true)
         }
         return remainder.isEmpty || remainder.count != stack.count
+    }
+
+    fun squareSum(number: Int): Int{
+        return number * number
+    }
+
+    fun squareSum(number: Double): Double{
+        return number * number
     }
 }
