@@ -1,5 +1,7 @@
 package com.tencao.nmd.events
 
+import be.bluexin.saomclib.capabilities.getPartyCapability
+import com.tencao.nmd.util.PartyHelper
 import com.tencao.nmd.util.PlayerHelper
 import net.minecraft.inventory.IInventory
 import net.minecraft.item.ItemStack
@@ -13,7 +15,8 @@ class BlockEventHandler {
     fun onBlockDrops(e: BlockEvent.HarvestDropsEvent) {
         if (!e.world.isRemote && PlayerHelper.isPlayer(e.harvester)) {
             e.drops.removeAll{PlayerHelper.addDropsToPlayer(e.harvester, it, false) && it.isEmpty}
-            e.drops.removeAll{PlayerHelper.addDropsToParty(e.harvester, it, false) && it.isEmpty}
+            if (e.harvester.getPartyCapability().party != null)
+                e.drops.removeAll{PartyHelper.addDropsToParty(e.harvester, e.harvester.getPartyCapability().party!!, it) && it.isEmpty}
         }
     }
 

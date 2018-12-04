@@ -50,35 +50,6 @@ object PlayerHelper {
     }
 
     /**
-     * @param player The player who issued the drops
-     * @param itemStack The ItemStack to attempt to add
-     * @param leader If the leader should be included in the drops
-     */
-    fun addDropsToParty(player: EntityPlayer, itemStack: ItemStack, leader: Boolean): Boolean{
-        val party = player.getCapability(PartyCapability.CAP_INSTANCE, null)!!.party
-        if (party != null) {
-            val partyMembers = party.members.filter { pl -> (!leader && party.leader != pl || leader) && !pl.getNMDData().isBlackListed(itemStack) && player.getDistanceSq(pl) <= squareSum(64)}.toMutableList()
-            if (partyMembers.isNotEmpty()) {
-                while (partyMembers.isNotEmpty() && !itemStack.isEmpty){
-                    val member = partyMembers[player.world.rand.nextInt(partyMembers.size - 1)]
-                    if (giveItemToPlayer(member, ItemStack(itemStack.item, 1))){
-                        itemStack.shrink(1)
-                    }
-                    else partyMembers.remove(member)
-                }
-                return true
-            }
-        }
-        return false
-    }
-
-    fun addExpToParty(player: EntityPlayer, exp: Int){
-        val selectedMembers = player.getPartyCapability().party?.members?.filter { player.getDistanceSq(it) <= PlayerHelper.squareSum(128) } ?: sequenceOf(player)
-        val givenExp = exp / selectedMembers.count()// Your version has an exp loss !!
-        selectedMembers.forEach { it.addExperience(givenExp) }
-    }
-
-    /**
      * Inserts the given itemstack into the players inventory.
      * If the inventory can't hold it, the item will be dropped in the world at the players position.
      *

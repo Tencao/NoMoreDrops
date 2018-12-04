@@ -1,6 +1,7 @@
 package com.tencao.nmd.events
 
 import be.bluexin.saomclib.capabilities.PartyCapability
+import com.tencao.nmd.util.PartyHelper
 import com.tencao.nmd.util.PlayerHelper
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraftforge.event.entity.living.LivingDropsEvent
@@ -18,7 +19,7 @@ class LivingEventHandler {
                 val player = source.damageSrc.trueSource as EntityPlayer
                 val party = player.getCapability(PartyCapability.CAP_INSTANCE, null)!!.party
                 if (party != null) {
-                    event.drops.removeAll{PlayerHelper.addDropsToParty(player, it.item, true) && it.isDead}
+                    event.drops.removeAll{PartyHelper.addDropsToParty(player, party, it.item) && it.isDead}
                 } else
                     event.drops.removeAll{PlayerHelper.addDropsToPlayer(player, it.item, false) && it.isDead}
             }
@@ -31,7 +32,7 @@ class LivingEventHandler {
         if (!mob.world.isRemote){
             val players = mob.combatTracker.combatEntries.filter { PlayerHelper.isPlayer(it.damageSrc.trueSource) }.toList()
             players.forEach {
-                PlayerHelper.addExpToParty(it.damageSrc.trueSource as EntityPlayer, event.droppedExperience / players.size)
+                PartyHelper.addExpToParty(it.damageSrc.trueSource as EntityPlayer, event.droppedExperience / players.size)
             }
         }
     }

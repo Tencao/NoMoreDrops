@@ -3,6 +3,5 @@ package com.tencao.nmd.util
 import java.util.*
 
 class LowerCasePrefixPredicate(private val prefix: String) : (String?) -> Boolean {
-    override fun invoke(p1: String?): Boolean {return p1?.toLowerCase(Locale.ROOT)!!.startsWith(prefix.toLowerCase(Locale.ROOT))
-    }
+    override fun invoke(p1: String?): Boolean {return p1?.toLowerCase(Locale.ROOT)!!.startsWith(prefix.toLowerCase(Locale.ROOT)) }
 }

@@ -3,7 +3,9 @@ package com.tencao.nmd.capability
 import be.bluexin.saomclib.capabilities.AbstractCapability
 import be.bluexin.saomclib.capabilities.AbstractEntityCapability
 import be.bluexin.saomclib.capabilities.Key
+import be.bluexin.saomclib.capabilities.getPartyCapability
 import com.tencao.nmd.NMDCore
+import com.tencao.nmd.drops.LootSettings
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
@@ -21,6 +23,21 @@ class PlayerData : AbstractEntityCapability() {
     var itemBlacklist: MutableList<ResourceLocation> = ArrayList()
     lateinit var player: EntityPlayer
         private set
+
+    /**
+     * The loot setting used for drops
+     */
+    var lootSetting = LootSettings.Random
+    set(value) {
+        player.getPartyCapability().party?.isLeader(player).let {
+            field = value
+        }
+    }
+
+    /**
+     * The last party member number used for the round robin list
+     */
+    var lastMember: Short = 0
 
     override fun setup(param: Any): AbstractCapability {
         super.setup(param)
