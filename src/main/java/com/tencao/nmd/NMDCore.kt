@@ -45,7 +45,7 @@ object NMDCore {
         MinecraftForge.EVENT_BUS.register(ItemRollGUI)
         MinecraftForge.EVENT_BUS.register(WorldEventListener)
         MinecraftForge.EVENT_BUS.register(PlayerEventListener)
-        MinecraftForge.EVENT_BUS.register(PartyLootEventListener)
+        MinecraftForge.EVENT_BUS.register(PartyEventListener)
 
         PacketPipeline.registerMessage(BlackListPKT::class.java, BlackListPKT.Companion.Handler::class.java)
         PacketPipeline.registerMessage(LootClientPKT::class.java, LootClientPKT.Companion.Handler::class.java)

@@ -32,7 +32,7 @@ object PartyHelper {
             PacketPipeline.sendTo(LootClientPKT(entityItem.toStack(), NMDConfig.loot.LootRollTimer * 20, rollID, rarity, lootSettings), it as EntityPlayerMP)
             rollData.add(RollData(it.uniqueID))
         }
-        LootRegistry.lootdrops.add(ServerLootObject(entityItem, party, time, rollID, lootSettings, lootSettings.createServerCache(entityItem.toStack(), party)))
+        LootRegistry.lootdrops.add(ServerLootObject(entityItem, party, time, rollID, lootSettings, LootRegistry.getServerLootCache(lootSettings, party)))
     }
 
     fun addExpToParty(player: EntityPlayer, exp: Int){

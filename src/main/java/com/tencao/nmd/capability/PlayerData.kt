@@ -3,6 +3,7 @@ package com.tencao.nmd.capability
 import be.bluexin.saomclib.capabilities.AbstractCapability
 import be.bluexin.saomclib.capabilities.AbstractEntityCapability
 import be.bluexin.saomclib.capabilities.Key
+import be.bluexin.saomclib.packets.PacketPipeline
 import com.tencao.nmd.NMDCore
 import com.tencao.nmd.api.ILootSettings
 import com.tencao.nmd.api.IRarity
@@ -11,7 +12,9 @@ import com.tencao.nmd.data.ClientLootObject
 import com.tencao.nmd.data.SimpleStack
 import com.tencao.nmd.drops.LootRegistry
 import com.tencao.nmd.gui.ItemRollGUI
+import com.tencao.nmd.network.packets.LootSettingPKT
 import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTBase
 import net.minecraft.nbt.NBTTagCompound
@@ -21,6 +24,7 @@ import net.minecraft.util.NonNullList
 import net.minecraft.util.ResourceLocation
 import net.minecraftforge.common.capabilities.Capability
 import net.minecraftforge.common.capabilities.CapabilityInject
+import net.minecraftforge.fml.common.FMLCommonHandler
 import java.util.*
 import kotlin.collections.HashSet
 
@@ -83,6 +87,18 @@ class PlayerData : AbstractEntityCapability() {
     fun setLootSetting(lootSettingsEnum: ILootSettings, dropRarityEnum: IRarity){
         lootSettings.removeIf{ it.second == dropRarityEnum}
         lootSettings.add(Pair(lootSettingsEnum, dropRarityEnum))
+        if (!player.world.isRemote)
+            PacketPipeline.sendTo(LootSettingPKT(lootSettingsEnum, dropRarityEnum), player as EntityPlayerMP)
+    }
+
+    fun setLootSetting(lootSettings: LinkedHashSet<Pair<ILootSettings, IRarity>>){
+        this.lootSettings.clear()
+        this.lootSettings.addAll(lootSettings)
+    }
+
+    fun resetLootSettings(){
+        this.lootSettings.clear()
+        this.lootSettings.addAll(LootRegistry.defaultLootPairings)
     }
 
     fun getLootSetting(rarity: IRarity): ILootSettings {

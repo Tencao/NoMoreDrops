@@ -15,22 +15,22 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext
 
 class LootSettingPKT(): IMessage {
 
-    private var rarity : IRarity = DropRarityEnum.UNKNOWN
     private var lootSetting : ILootSettings = LootSettingsEnum.Random
+    private var rarity : IRarity = DropRarityEnum.UNKNOWN
 
-    constructor(dropRarityEnum: IRarity, lootSettingsEnum: ILootSettings): this(){
-        this.rarity = dropRarityEnum
+    constructor(lootSettingsEnum: ILootSettings, dropRarityEnum: IRarity): this(){
         this.lootSetting = lootSettingsEnum
+        this.rarity = dropRarityEnum
     }
 
     override fun fromBytes(buf: ByteBuf) {
-        this.rarity = LootRegistry.getRegisteredRarity(buf.readString())
         this.lootSetting = LootRegistry.getRegisteredLoot(buf.readString())
+        this.rarity = LootRegistry.getRegisteredRarity(buf.readString())
     }
 
     override fun toBytes(buf: ByteBuf) {
-        buf.writeString(rarity.toString())
         buf.writeString(lootSetting.toString())
+        buf.writeString(rarity.toString())
     }
 
     companion object {

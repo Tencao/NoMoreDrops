@@ -105,14 +105,6 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
 
         }
 
-        override fun createClientCache(stack: ItemStack, party: IParty): Any? {
-            return super.createClientCache(stack, party)
-        }
-
-        override fun createServerCache(stack: ItemStack, party: IParty): Any? {
-            return super.createServerCache(stack, party)
-        }
-
         override fun processClientCache(player: EntityPlayer, clientCache: Any?, serverCache: Any?) {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
@@ -191,7 +183,7 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
             return 0
         }
 
-        override fun createServerCache(stack: ItemStack, party: IParty): Any? {
+        override fun createServerCache(party: IParty): Any? {
             val rollData = HashSet<RollData>()
             party.members.forEach {
                 rollData.add(RollData(it.uniqueID))

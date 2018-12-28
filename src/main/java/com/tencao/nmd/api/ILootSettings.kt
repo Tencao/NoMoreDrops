@@ -27,6 +27,12 @@ interface ILootSettings {
      */
     fun handleLoot(entityItem: SimpleEntityItem, party: IParty, cache: Any?)
 
+    /**
+     * Creates a new server cache instance for the loot drop.
+     */
+    fun createServerCache(party: IParty): Any?{
+        return null
+    }
 }
 
 /**
@@ -112,13 +118,6 @@ interface ISpecialLootSettings: ILootSettings {
      * Creates a new client cache instance for the loot drop.
      */
     fun createClientCache(stack: ItemStack, party: IParty): Any?{
-        return null
-    }
-
-    /**
-     * Creates a new server cache instance for the loot drop.
-     */
-    fun createServerCache(stack: ItemStack, party: IParty): Any?{
         return null
     }
 

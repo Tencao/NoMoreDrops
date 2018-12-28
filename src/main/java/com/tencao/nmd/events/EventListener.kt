@@ -2,6 +2,7 @@ package com.tencao.nmd.events
 
 import be.bluexin.saomclib.capabilities.PartyCapability
 import be.bluexin.saomclib.capabilities.getPartyCapability
+import be.bluexin.saomclib.events.PartyEvent
 import com.tencao.nmd.NMDCore
 import com.tencao.nmd.api.DropRarityEnum
 import com.tencao.nmd.api.ISpecialLootSettings
@@ -195,12 +196,28 @@ object PlayerEventListener {
 
 }
 
-object PartyLootEventListener{
+object PartyEventListener{
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    fun onPartyJoin(event: PartyEvent.Join){
+        event.player.getNMDData().setLootSetting(event.party!!.leader!!.getNMDData().lootSettings)
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    fun onPartyLeave(event: PartyEvent.Leave){
+        event.player.getNMDData().resetLootSettings()
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    fun onPartyDisband(event: PartyEvent.Disbanded){
+        event.party?.members?.forEach { it.getNMDData().resetLootSettings() }
+        LootRegistry.removeServerLootCache(event.party!!)
+    }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     fun onPartyLoot(event: PartyLootEvent){
         if (event.lootSetting is ISpecialLootSettings)
             PartyHelper.sendLootPacket(event.entityItem, event.party, event.dropRarity, event.lootSetting as ISpecialLootSettings, event.rollID)
-        else event.lootSetting.handleLoot(event.entityItem, event.party, null)
+        else event.lootSetting.handleLoot(event.entityItem, event.party, LootRegistry.getServerLootCache(event.lootSetting, event.party))
     }
 }
