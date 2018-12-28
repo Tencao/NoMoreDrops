@@ -58,7 +58,7 @@ object LootSettingsCMD : NMDCommandBase() {
             val lootSettings = LootSettingsEnum.valueOf(params[1].toLowerCase(Locale.ROOT))
             (sender as EntityPlayer).getNMDData().setLootSetting(lootSettings, rarity)
             (sender).getPartyCapability().party?.members?.forEach {
-                PacketPipeline.sendTo(LootSettingPKT(rarity, lootSettings), it as EntityPlayerMP)
+                PacketPipeline.sendTo(LootSettingPKT(lootSettings, rarity), it as EntityPlayerMP)
             }
         } catch (e: Exception){
             sendError(sender, TextComponentTranslation("nmd.lootsetting.null"))

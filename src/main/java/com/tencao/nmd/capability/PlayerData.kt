@@ -24,7 +24,6 @@ import net.minecraft.util.NonNullList
 import net.minecraft.util.ResourceLocation
 import net.minecraftforge.common.capabilities.Capability
 import net.minecraftforge.common.capabilities.CapabilityInject
-import net.minecraftforge.fml.common.FMLCommonHandler
 import java.util.*
 import kotlin.collections.HashSet
 
@@ -34,19 +33,14 @@ class PlayerData : AbstractEntityCapability() {
     lateinit var player: EntityPlayer
         private set
 
-    val lootTypes: LinkedHashSet<ILootSettings> = LinkedHashSet()
     val lootSettings: LinkedHashSet<Pair<ILootSettings, IRarity>> = LinkedHashSet()
 
+    // Block Loot will always be classed as Unknown rarity
     var extraBlocksAsLoot = false
     var upgradeEnchantRarity = true
 
 
     val lootDrops = mutableListOf<ClientLootObject>()
-
-    /**
-     * The last party member number used for the round robin list
-     */
-    var lastMember: Short = 0
 
     override fun setup(param: Any): AbstractCapability {
         super.setup(param)

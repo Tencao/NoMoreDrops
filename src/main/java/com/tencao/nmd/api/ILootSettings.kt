@@ -24,8 +24,9 @@ interface ILootSettings {
      * @param entityItem The data object containing the loot
      * @param party The party tied to the loot
      * @param cache The cache object, only present on ISpecialLoot
+     * @return Returns the updated cache back, null if no changes
      */
-    fun handleLoot(entityItem: SimpleEntityItem, party: IParty, cache: Any?)
+    fun handleLoot(entityItem: SimpleEntityItem, party: IParty, cache: Any?): Any?
 
     /**
      * Creates a new server cache instance for the loot drop.

@@ -39,10 +39,10 @@ enum class LootSettingsEnum: ILootSettings {
         }
     },
     RoundRobin{
-        override fun handleLoot(entityItem: SimpleEntityItem, party: IParty, cache: Any?) {
+        override fun handleLoot(entityItem: SimpleEntityItem, party: IParty, cache: Any?): Any? {
             val partyMembers = party.members.filter { pl -> !pl.getNMDData().isBlackListed(entityItem.toStack()) && entityItem.getDistanceSq(pl) <= PlayerHelper.squareSum(64) }.toMutableList()
+            var lastMember = cache as Int
             if (partyMembers.isNotEmpty()) {
-                var lastMember = party.leader!!.getNMDData().lastMember.toInt()
                 val stack = entityItem.toStack()
                 stack.count = 1
                 while (partyMembers.isNotEmpty() && !entityItem.isEmpty()){
@@ -54,10 +54,14 @@ enum class LootSettingsEnum: ILootSettings {
                     }
                     else partyMembers.remove(member)
                 }
-                party.leader!!.getNMDData().lastMember = lastMember.toShort()
             }
             if (!entityItem.isEmpty())
                 entityItem.spawnEntityPartyItem(party)
+            return lastMember
+        }
+
+        override fun createServerCache(party: IParty): Int {
+            return 0
         }
     },
 }

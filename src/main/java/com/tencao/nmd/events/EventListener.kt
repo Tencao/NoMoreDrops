@@ -11,6 +11,7 @@ import com.tencao.nmd.capability.getNMDData
 import com.tencao.nmd.data.SimpleEntityItem
 import com.tencao.nmd.drops.LootRegistry
 import com.tencao.nmd.drops.LootTableMapper
+import com.tencao.nmd.entities.EntityPartyItem
 import com.tencao.nmd.util.PartyHelper
 import com.tencao.nmd.util.PlayerHelper
 import net.minecraft.entity.EntityLiving
@@ -74,7 +75,7 @@ object EntityItemEventListener {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     fun entityItemSpawnEvent(e: EntityJoinWorldEvent){
-        if (!e.world.isRemote && e.entity is EntityItem) {
+        if (!e.world.isRemote && e.entity is EntityItem && e.entity !is EntityPartyItem) {
             val item = e.entity as EntityItem
             if (item.owner.isNullOrEmpty()) {
                 e.world.getNearestPlayerNotCreative(item, PlayerHelper.squareSum(4.0))?.let {
@@ -218,6 +219,9 @@ object PartyEventListener{
     fun onPartyLoot(event: PartyLootEvent){
         if (event.lootSetting is ISpecialLootSettings)
             PartyHelper.sendLootPacket(event.entityItem, event.party, event.dropRarity, event.lootSetting as ISpecialLootSettings, event.rollID)
-        else event.lootSetting.handleLoot(event.entityItem, event.party, LootRegistry.getServerLootCache(event.lootSetting, event.party))
+        else {
+            val cache = event.lootSetting.handleLoot(event.entityItem, event.party, LootRegistry.getServerLootCache(event.lootSetting, event.party))
+            if (cache != null) LootRegistry.updateServerCache(event.lootSetting, event.party, cache)
+        }
     }
 }

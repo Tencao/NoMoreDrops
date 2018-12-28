@@ -33,7 +33,8 @@ data class ServerLootObject(val entityItem: SimpleEntityItem, val party: IParty,
     }
 
     fun handleLoot(){
-        lootSetting.handleLoot(entityItem, party, serverCache)
+        val cache = lootSetting.handleLoot(entityItem, party, serverCache)
+        if (cache != null) LootRegistry.updateServerCache(lootSetting, party, cache)
         LootRegistry.lootdrops.remove(this)
     }
 

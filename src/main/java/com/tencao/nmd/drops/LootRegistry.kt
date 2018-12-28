@@ -12,7 +12,7 @@ object LootRegistry {
     private var registeredLootSettings: LinkedHashSet<Pair<ILootSettings, String>> = linkedSetOf()
     private var registeredRarity: LinkedHashSet<Pair<IRarity, String>> = linkedSetOf()
     val defaultLootPairings: LinkedHashSet<Pair<ILootSettings, IRarity>> = linkedSetOf()
-    val serverLootCache: LinkedHashMap<ILootSettings, Pair<IParty, Any?>> = linkedMapOf()
+    private val serverLootCache: LinkedHashMap<ILootSettings, Pair<IParty, Any?>> = linkedMapOf()
 
     fun getRegisteredLoot(name: String): ILootSettings{
         return registeredLootSettings.first { it.second.equals(name, true) }.first
@@ -34,6 +34,10 @@ object LootRegistry {
         val cache = serverLootCache[lootSettings]?.second?: {
             serverLootCache[lootSettings] = Pair(party, lootSettings.createServerCache(party))
         }
+    }
+
+    fun updateServerCache(lootSettings: ILootSettings, party: IParty, cache: Any){
+        serverLootCache[lootSettings] = Pair(party, cache)
     }
 
     fun removeServerLootCache(party: IParty){
