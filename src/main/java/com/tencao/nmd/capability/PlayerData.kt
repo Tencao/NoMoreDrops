@@ -3,11 +3,15 @@ package com.tencao.nmd.capability
 import be.bluexin.saomclib.capabilities.AbstractCapability
 import be.bluexin.saomclib.capabilities.AbstractEntityCapability
 import be.bluexin.saomclib.capabilities.Key
-import be.bluexin.saomclib.capabilities.getPartyCapability
 import com.tencao.nmd.NMDCore
-import com.tencao.nmd.drops.LootSettings
+import com.tencao.nmd.api.ILootSettings
+import com.tencao.nmd.api.IRarity
+import com.tencao.nmd.api.LootSettingsEnum
+import com.tencao.nmd.data.ClientLootObject
+import com.tencao.nmd.data.SimpleStack
+import com.tencao.nmd.drops.LootRegistry
+import com.tencao.nmd.gui.ItemRollGUI
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTBase
 import net.minecraft.nbt.NBTTagCompound
@@ -17,22 +21,23 @@ import net.minecraft.util.NonNullList
 import net.minecraft.util.ResourceLocation
 import net.minecraftforge.common.capabilities.Capability
 import net.minecraftforge.common.capabilities.CapabilityInject
+import java.util.*
+import kotlin.collections.HashSet
 
 class PlayerData : AbstractEntityCapability() {
 
-    var itemBlacklist: MutableList<ResourceLocation> = ArrayList()
+    var itemBlacklist = HashSet<SimpleStack>()
     lateinit var player: EntityPlayer
         private set
 
-    /**
-     * The loot setting used for drops
-     */
-    var lootSetting = LootSettings.Random
-    set(value) {
-        player.getPartyCapability().party?.isLeader(player).let {
-            field = value
-        }
-    }
+    val lootTypes: LinkedHashSet<ILootSettings> = LinkedHashSet()
+    val lootSettings: LinkedHashSet<Pair<ILootSettings, IRarity>> = LinkedHashSet()
+
+    var extraBlocksAsLoot = false
+    var upgradeEnchantRarity = true
+
+
+    val lootDrops = mutableListOf<ClientLootObject>()
 
     /**
      * The last party member number used for the round robin list
@@ -42,34 +47,46 @@ class PlayerData : AbstractEntityCapability() {
     override fun setup(param: Any): AbstractCapability {
         super.setup(param)
         this.player = param as EntityPlayer
+        lootSettings.addAll(LootRegistry.defaultLootPairings)
         return this
     }
 
-    fun addItemToList(itemStack: ItemStack): Boolean{
-        val item: ResourceLocation = Item.REGISTRY.getNameForObject(itemStack.item)!!
-        return if (!itemBlacklist.contains(item)) {
-            itemBlacklist.add(item)
-            true
-        }
-        else {
-            itemBlacklist.remove(item)
-            false
-        }
+    fun modifyBlackList(itemStack: ItemStack): Boolean{
+        return itemBlacklist.removeIf { it.test(itemStack) } or itemBlacklist.add(SimpleStack(itemStack))
     }
 
     fun isBlackListed(itemStack: ItemStack): Boolean{
-        return itemBlacklist.any { it == Item.REGISTRY.getNameForObject(itemStack.item) }
+        return itemBlacklist.any { it.test(itemStack) }
     }
 
     fun setItemList(items: NonNullList<ItemStack>){
         itemBlacklist.clear()
-        items.forEach { itemBlacklist.add(Item.REGISTRY.getNameForObject(it.item)!!) }
+        items.forEach { itemBlacklist.add(SimpleStack(it)) }
     }
 
     fun getItemList(): NonNullList<ItemStack> {
         val items: NonNullList<ItemStack> = NonNullList.create()
-        itemBlacklist.forEach{ it -> items.add(ItemStack(Item.REGISTRY.getObject(it)))}
+        itemBlacklist.forEach{ it -> items.add(it.toStack())}
         return items
+    }
+
+    fun tickLoot(){
+        lootDrops.removeAll {
+            if (--it.tickTime <= 0){
+                ItemRollGUI.recalculateFrom(it.lootSetting)
+                return@removeAll true
+            }
+            false
+        }
+    }
+
+    fun setLootSetting(lootSettingsEnum: ILootSettings, dropRarityEnum: IRarity){
+        lootSettings.removeIf{ it.second == dropRarityEnum}
+        lootSettings.add(Pair(lootSettingsEnum, dropRarityEnum))
+    }
+
+    fun getLootSetting(rarity: IRarity): ILootSettings {
+        return lootSettings.firstOrNull { it.second == rarity }?.first ?: LootSettingsEnum.Random
     }
 
     override val shouldSyncOnDeath = true
@@ -87,7 +104,10 @@ class PlayerData : AbstractEntityCapability() {
 
             instance.itemBlacklist.forEach{it ->
                 val itemInfo = NBTTagCompound()
-                itemInfo.setString("name", it.toString())
+                itemInfo.setString("name", it.resource.toString())
+                itemInfo.setInteger("count", it.count)
+                itemInfo.setInteger("id", it.id)
+                itemInfo.setTag("nbt", it.nbt)
             }
 
             tag.setTag("items", items)
@@ -104,7 +124,7 @@ class PlayerData : AbstractEntityCapability() {
             var tag: NBTTagCompound
             for (i in 0 until itemCount) {
                 tag = items.getCompoundTagAt(i)
-                instance.itemBlacklist.add(ResourceLocation(tag.getString("name")))
+                instance.itemBlacklist.add(SimpleStack(ResourceLocation(tag.getString("name")), tag.getInteger("count"), tag.getInteger("id"), tag.getTag("nbt") as NBTTagCompound))
             }
         }
 

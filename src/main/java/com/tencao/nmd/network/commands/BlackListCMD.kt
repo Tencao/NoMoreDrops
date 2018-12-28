@@ -32,10 +32,8 @@ object BlackListCMD : NMDCommandBase() {
         if (PlayerHelper.isPlayer(sender.commandSenderEntity)) {
             val player: EntityPlayer = (sender.commandSenderEntity as EntityPlayer)
             if (player.heldItemMainhand != ItemStack.EMPTY) {
-                if (player.getNMDData().addItemToList(player.heldItemMainhand))
-                    sendSuccess(sender, TextComponentTranslation("nmd.blacklist.add", player.heldItemMainhand.displayName))
-                else
-                    sendSuccess(sender, TextComponentTranslation("nmd.blacklist.remove", player.heldItemMainhand.displayName))
+                if (player.getNMDData().modifyBlackList(player.heldItemMainhand))
+                    sendSuccess(sender, TextComponentTranslation("nmd.blacklist.modified", player.heldItemMainhand.displayName))
             }
             else
                 sendError(sender, TextComponentTranslation("nmd.blacklist.null"))

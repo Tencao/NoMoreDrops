@@ -1,16 +1,24 @@
 package com.tencao.nmd.network.packets
 
+import be.bluexin.saomclib.packets.AbstractPacketHandler
 import com.tencao.nmd.capability.getNMDData
 import io.netty.buffer.ByteBuf
 import net.minecraft.client.Minecraft
+import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
+import net.minecraft.util.IThreadListener
 import net.minecraft.util.NonNullList
 import net.minecraftforge.fml.common.network.ByteBufUtils
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage
-import net.minecraftforge.fml.common.network.simpleimpl.IMessageHandler
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext
 
-class BlackListPKT(var items: NonNullList<ItemStack>) : IMessage {
+class BlackListPKT() : IMessage {
+
+    val items: NonNullList<ItemStack> = NonNullList.create()
+
+    constructor(items: NonNullList<ItemStack>): this(){
+        this.items.addAll(items)
+    }
 
     private var count = 0
 
@@ -26,14 +34,17 @@ class BlackListPKT(var items: NonNullList<ItemStack>) : IMessage {
         items.forEach { ByteBufUtils.writeItemStack(buf, it) }
     }
 
-    class Handler : IMessageHandler<BlackListPKT, IMessage> {
-        override fun onMessage(message: BlackListPKT, ctx: MessageContext): IMessage? {
-
-            if (ctx.side.isClient)
+    companion object {
+        class Handler : AbstractPacketHandler<BlackListPKT>() {
+            override fun handleClientPacket(player: EntityPlayer, message: BlackListPKT, ctx: MessageContext, mainThread: IThreadListener): IMessage? {
                 Minecraft.getMinecraft().addScheduledTask { Minecraft.getMinecraft().player.getNMDData().setItemList(message.items)}
-            else
+                return null
+            }
+
+            override fun handleServerPacket(player: EntityPlayer, message: BlackListPKT, ctx: MessageContext, mainThread: IThreadListener): IMessage? {
                 ctx.serverHandler.player.server.addScheduledTask { ctx.serverHandler.player.getNMDData().setItemList(message.items)}
-            return null
+                return null
+            }
         }
     }
 

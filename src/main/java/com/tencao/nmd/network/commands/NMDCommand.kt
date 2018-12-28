@@ -12,7 +12,8 @@ import java.util.*
 object NMDCommand : NMDCommandBase() {
 
     private val blackListCmd = BlackListCMD
-    private val commands = listOf("blacklist")
+    private val lootSettingCmd = LootSettingsCMD
+    private val commands = listOf("blacklist, lootsetting")
 
     override fun getName(): String {
         return "nmd"
@@ -49,19 +50,23 @@ object NMDCommand : NMDCommandBase() {
 
             val subName = params[0].toLowerCase(Locale.ROOT)
 
-            if ("blacklist" == subName) {
-                if (blackListCmd.checkPermission(server, sender)) {
-                    blackListCmd.execute(server, sender, relayparams)
-                } else {
-                    sendError(sender, TextComponentTranslation("commands.generic.permission"))
-                }
-                return
-            }
-            else {
-                sendError(sender, TextComponentTranslation("nmd.command.main.usage"))
-                return
-            }
+            when (subName){
+                "blacklist" ->
+                    if (blackListCmd.checkPermission(server, sender))
+                        blackListCmd.execute(server, sender, relayparams)
+                    else
+                        sendError(sender, TextComponentTranslation("commands.generic.permission"))
 
+                "lootsetting" ->
+                    if (lootSettingCmd.checkPermission(server, sender))
+                        lootSettingCmd.execute(server, sender, relayparams)
+                    else
+                        sendError(sender, TextComponentTranslation("commands.generic.permission"))
+                else -> {
+                    sendError(sender, TextComponentTranslation("nmd.command.main.usage"))
+                    return
+                }
+            }
         }
     }
 }
