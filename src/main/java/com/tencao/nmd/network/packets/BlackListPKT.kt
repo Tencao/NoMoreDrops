@@ -2,36 +2,34 @@ package com.tencao.nmd.network.packets
 
 import be.bluexin.saomclib.packets.AbstractPacketHandler
 import com.tencao.nmd.capability.getNMDData
+import com.tencao.nmd.data.SimpleStack
 import io.netty.buffer.ByteBuf
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.item.ItemStack
 import net.minecraft.util.IThreadListener
-import net.minecraft.util.NonNullList
-import net.minecraftforge.fml.common.network.ByteBufUtils
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext
 
 class BlackListPKT() : IMessage {
 
-    val items: NonNullList<ItemStack> = NonNullList.create()
+    private var count = 0
+    val items: HashSet<SimpleStack> = hashSetOf()
 
-    constructor(items: NonNullList<ItemStack>): this(){
+    constructor(items: HashSet<SimpleStack>): this(){
         this.items.addAll(items)
     }
 
-    private var count = 0
 
     override fun fromBytes(buf: ByteBuf?) {
         count = buf!!.readInt()
         for (i in 0 until count) {
-            items.add(ByteBufUtils.readItemStack(buf))
+            items.add(SimpleStack.fromBytes(buf))
         }
     }
 
     override fun toBytes(buf: ByteBuf?) {
         buf!!.writeInt(count)
-        items.forEach { ByteBufUtils.writeItemStack(buf, it) }
+        items.forEach { it.toBytes(buf) }
     }
 
     companion object {

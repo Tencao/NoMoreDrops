@@ -5,6 +5,7 @@ import com.tencao.nmd.api.IRarity
 import com.tencao.nmd.api.ISpecialLootSettings
 import com.tencao.nmd.drops.LootRegistry
 import com.tencao.nmd.entities.EntityPartyItem
+import io.netty.buffer.ByteBuf
 import net.minecraft.entity.Entity
 import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.player.EntityPlayer
@@ -12,7 +13,7 @@ import net.minecraft.init.Items
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraft.util.ResourceLocation
+import net.minecraft.network.PacketBuffer
 import net.minecraft.world.World
 import java.util.*
 import java.util.function.Predicate
@@ -33,8 +34,9 @@ data class ServerLootObject(val entityItem: SimpleEntityItem, val party: IParty,
     }
 
     fun handleLoot(){
-        val cache = lootSetting.handleLoot(entityItem, party, serverCache)
-        if (cache != null) LootRegistry.updateServerCache(lootSetting, party, cache)
+        lootSetting.handleLoot(entityItem, party, serverCache)?.let {cache ->
+            LootRegistry.updateServerCache(lootSetting, party, cache)
+        }
         LootRegistry.lootdrops.remove(this)
     }
 
@@ -54,7 +56,7 @@ data class ServerLootObject(val entityItem: SimpleEntityItem, val party: IParty,
  * @param rarity The rarity of the item dropped
  * @param clientCache The cache for the loot type
  */
-data class ClientLootObject(val stack: ItemStack, val rollID: UUID, var tickTime: Int, val rarity: IRarity, val lootSetting: ISpecialLootSettings, val clientCache: Any?){
+data class ClientLootObject(val stack: SimpleStack, val rollID: UUID, var tickTime: Int, val rarity: IRarity, val lootSetting: ISpecialLootSettings, var clientCache: Any?){
 
     // Cached render position, recalculated everytime an element is added or removed
     var x: Int = 0
@@ -71,7 +73,7 @@ data class ClientLootObject(val stack: ItemStack, val rollID: UUID, var tickTime
  * @param uuid The players unique id
  * @param roll The Loot Roll
  */
-data class RollData(val uuid: UUID, var roll: Float = 0f): Predicate<UUID> {
+data class RollData(val uuid: UUID, var roll: Float = 0f): Predicate<EntityPlayer> {
 
     fun roll(type: Int){
         when (type){
@@ -82,20 +84,20 @@ data class RollData(val uuid: UUID, var roll: Float = 0f): Predicate<UUID> {
 
     }
 
-    fun needRoll(){
+    private fun needRoll(){
         roll = Random.nextInt(1, 100).toFloat()
     }
 
-    fun greedRoll(){
+    private fun greedRoll(){
         roll = Random.nextFloat()
     }
 
-    fun passRoll(){
+    private fun passRoll(){
         roll = -1f
     }
 
-    override fun test(id: UUID): Boolean {
-        return uuid == id
+    override fun test(player: EntityPlayer): Boolean {
+        return uuid == player.uniqueID
     }
 }
 
@@ -103,14 +105,14 @@ data class RollData(val uuid: UUID, var roll: Float = 0f): Predicate<UUID> {
 /**
  * Simple stack data sent and stored on the client
  */
-data class SimpleStack(val resource: ResourceLocation, var count: Int, var id: Int, var nbt: NBTTagCompound): Predicate<ItemStack> {
+data class SimpleStack(val id: Int, var count: Int, var meta: Int, var nbt: NBTTagCompound): Predicate<ItemStack> {
 
-    constructor(stack: ItemStack): this(Item.REGISTRY.getNameForObject(stack.item)!!, stack.count, stack.itemDamage, stack.serializeNBT())
+    constructor(stack: ItemStack): this(Item.REGISTRY.getIDForObject(stack.item), stack.count, stack.itemDamage, stack.serializeNBT())
 
-    constructor(item: Item, id: Int): this(Item.REGISTRY.getNameForObject(item)!!, 1, id, NBTTagCompound())
+    constructor(item: Item, meta: Int): this(Item.REGISTRY.getIDForObject(item), 1, meta, NBTTagCompound())
 
     fun toStack(): ItemStack{
-        return if (isEmpty()) ItemStack.EMPTY else ItemStack(getItem(), count, id, nbt)
+        return if (isEmpty()) ItemStack.EMPTY else ItemStack(getItem(), count, meta, nbt)
     }
 
     fun isEmpty(): Boolean{
@@ -118,11 +120,24 @@ data class SimpleStack(val resource: ResourceLocation, var count: Int, var id: I
     }
 
     fun getItem(): Item {
-        return Item.REGISTRY.getObject(resource)?: Items.AIR
+        return Item.REGISTRY.getObjectById(id)?: Items.AIR
     }
 
     override fun test(t: ItemStack): Boolean {
         return ItemStack.areItemStacksEqual(t, toStack())
+    }
+
+    fun toBytes(buf: ByteBuf) {
+        buf.writeInt(id)
+        buf.writeInt(count)
+        buf.writeInt(meta)
+        PacketBuffer(buf).writeCompoundTag(nbt)
+    }
+
+    companion object {
+        fun fromBytes(buf: ByteBuf): SimpleStack {
+            return SimpleStack(buf.readInt(), buf.readInt(), buf.readInt(), PacketBuffer(buf).readCompoundTag()!!)
+        }
     }
 }
 

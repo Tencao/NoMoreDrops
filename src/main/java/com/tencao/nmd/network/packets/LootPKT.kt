@@ -5,29 +5,32 @@ import be.bluexin.saomclib.packets.AbstractClientPacketHandler
 import be.bluexin.saomclib.packets.AbstractServerPacketHandler
 import be.bluexin.saomclib.readString
 import be.bluexin.saomclib.writeString
-import com.tencao.nmd.api.*
+import com.tencao.nmd.api.DropRarityEnum
+import com.tencao.nmd.api.IRarity
+import com.tencao.nmd.api.ISpecialLootSettings
+import com.tencao.nmd.api.SpecialLootSettingsEnum
 import com.tencao.nmd.capability.getNMDData
 import com.tencao.nmd.data.ClientLootObject
+import com.tencao.nmd.data.SimpleStack
 import com.tencao.nmd.drops.LootRegistry
-import com.tencao.nmd.gui.ItemRollGUI
+import com.tencao.nmd.gui.LootGUI
 import io.netty.buffer.ByteBuf
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
 import net.minecraft.util.IThreadListener
-import net.minecraftforge.fml.common.network.ByteBufUtils
 import net.minecraftforge.fml.common.network.simpleimpl.IMessage
 import net.minecraftforge.fml.common.network.simpleimpl.MessageContext
 import java.util.*
 
 class LootClientPKT(): IMessage {
 
-    private var stack: ItemStack = ItemStack.EMPTY
+    private var stack: SimpleStack = SimpleStack(ItemStack.EMPTY)
     private var timer: Int = 0
     private var rollID: UUID = UUID.randomUUID()
     private var rarity: IRarity = DropRarityEnum.UNKNOWN
     private var lootSetting : ISpecialLootSettings = SpecialLootSettingsEnum.NeedBeforeGreed
 
-    constructor(itemStack: ItemStack, timer: Int, rollID: UUID, rarity: IRarity, lootSetting: ISpecialLootSettings): this(){
+    constructor(itemStack: SimpleStack, timer: Int, rollID: UUID, rarity: IRarity, lootSetting: ISpecialLootSettings): this(){
         this.stack = itemStack
         this.timer = timer
         this.rollID = rollID
@@ -36,7 +39,7 @@ class LootClientPKT(): IMessage {
     }
 
     override fun fromBytes(buf: ByteBuf) {
-        this.stack = ByteBufUtils.readItemStack(buf)
+        this.stack = SimpleStack.fromBytes(buf)
         this.timer = buf.readInt()
         this.rollID = UUID.fromString(buf.readString())
         this.rarity = LootRegistry.getRegisteredRarity(buf.readString())
@@ -44,7 +47,7 @@ class LootClientPKT(): IMessage {
     }
 
     override fun toBytes(buf: ByteBuf) {
-        ByteBufUtils.writeItemStack(buf, stack)
+        stack.toBytes(buf)
         buf.writeInt(timer)
         buf.writeString(rollID.toString())
         buf.writeString(rarity.toString())
@@ -56,9 +59,9 @@ class LootClientPKT(): IMessage {
             override fun handleClientPacket(player: EntityPlayer, message: LootClientPKT, ctx: MessageContext, mainThread: IThreadListener): IMessage? {
                 mainThread.addScheduledTask {
                     val nmdData = player.getNMDData()
-                    val clientLootObject = ClientLootObject(message.stack, message.rollID, message.timer, message.rarity, message.lootSetting, message.lootSetting.createClientCache(message.stack, player.getPartyCapability().party!!))
+                    val clientLootObject = ClientLootObject(message.stack, message.rollID, message.timer, message.rarity, message.lootSetting, message.lootSetting.createClientCache(message.stack.toStack(), player.getPartyCapability().party!!))
                     nmdData.lootDrops.add(clientLootObject)
-                    ItemRollGUI.calculateXY(clientLootObject)
+                    LootGUI.calculateXY(clientLootObject)
                 }
                 return null
             }

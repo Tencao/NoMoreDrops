@@ -12,8 +12,12 @@ import com.tencao.nmd.data.SimpleEntityItem
 import com.tencao.nmd.drops.LootRegistry
 import com.tencao.nmd.drops.LootTableMapper
 import com.tencao.nmd.entities.EntityPartyItem
+import com.tencao.nmd.gui.LootGUI
+import com.tencao.nmd.util.ClientKeyHelper
+import com.tencao.nmd.util.Keybinds
 import com.tencao.nmd.util.PartyHelper
 import com.tencao.nmd.util.PlayerHelper
+import net.minecraft.client.Minecraft
 import net.minecraft.entity.EntityLiving
 import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.player.EntityPlayer
@@ -29,6 +33,8 @@ import net.minecraftforge.event.world.WorldEvent
 import net.minecraftforge.fml.common.eventhandler.EventPriority
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent
+import net.minecraftforge.fml.relauncher.Side
+import net.minecraftforge.fml.relauncher.SideOnly
 import java.util.*
 
 object BlockEventListener {
@@ -38,9 +44,9 @@ object BlockEventListener {
         if (!e.world.isRemote && PlayerHelper.isPlayer(e.harvester)) {
             e.drops.removeAll{ PlayerHelper.addDropsToPlayer(e.harvester, it, false) && it.isEmpty}
             val party = e.harvester.getPartyCapability().party
-            if (party != null){
+            if (PartyHelper.isValidParty(party)){
                 e.drops.forEach { stack ->
-                    PartyLootEvent(SimpleEntityItem(stack, e.pos.x.toDouble(), e.pos.y.toDouble(), e.pos.z.toDouble(), e.world), party, party.leader!!.getNMDData().getLootSetting(DropRarityEnum.UNKNOWN), DropRarityEnum.UNKNOWN, UUID.randomUUID())
+                    PartyLootEvent(SimpleEntityItem(stack, e.pos.x.toDouble(), e.pos.y.toDouble(), e.pos.z.toDouble(), e.world), party!!, party.leader!!.getNMDData().getLootSetting(DropRarityEnum.UNKNOWN), DropRarityEnum.UNKNOWN, UUID.randomUUID())
                 }
                 e.drops.clear()
             }
@@ -122,9 +128,9 @@ object LivingEventListener {
         val mob = event.entityLiving?: return
         if (!mob.world.isRemote && mob is EntityLiving){
             val player = dropCache.first { it.first == mob.uniqueID }.second.firstOrNull()?: return
-            val party = player.getCapability(PartyCapability.CAP_INSTANCE, null)!!.party
-            if (party != null) {
-                val leaderNMDData = party.leader!!.getNMDData()
+            val party = player.getPartyCapability().party
+            if (PartyHelper.isValidParty(party)) {
+                val leaderNMDData = party!!.leader!!.getNMDData()
                 event.drops.forEach { entityItem ->
                     NMDCore.LOGGER.info("Adding drop for ${entityItem.item}")
                     val rarity = LootTableMapper.getRarity(entityItem.item)
@@ -146,7 +152,7 @@ object LivingEventListener {
             val players = dropCache.first { it.first == mob.uniqueID }.second
             players.forEach {player ->
                 val party = player.getCapability(PartyCapability.CAP_INSTANCE, null)!!.party
-                if (party != null) {
+                if (PartyHelper.isValidParty(party)) {
                     PartyHelper.addExpToParty(player, event.droppedExperience / players.size)
                 } else {
                     player.addExperience(event.droppedExperience)
@@ -220,8 +226,21 @@ object PartyEventListener{
         if (event.lootSetting is ISpecialLootSettings)
             PartyHelper.sendLootPacket(event.entityItem, event.party, event.dropRarity, event.lootSetting as ISpecialLootSettings, event.rollID)
         else {
-            val cache = event.lootSetting.handleLoot(event.entityItem, event.party, LootRegistry.getServerLootCache(event.lootSetting, event.party))
-            if (cache != null) LootRegistry.updateServerCache(event.lootSetting, event.party, cache)
+            event.lootSetting.handleLoot(event.entityItem, event.party, LootRegistry.getServerLootCache(event.lootSetting, event.party))?.let {cache ->
+                LootRegistry.updateServerCache(event.lootSetting, event.party, cache)
+            }
+        }
+    }
+}
+
+@SideOnly(Side.CLIENT)
+object KeyPressListener{
+
+    @SubscribeEvent
+    fun keyPress(event: TickEvent.ClientTickEvent){
+        ClientKeyHelper.mcToNmd.asSequence().firstOrNull { it.key.isKeyDown }?.let {
+            if (it.key.keyDescription == Keybinds.LOOT_GUI.keyName)
+                Minecraft.getMinecraft().displayGuiScreen(LootGUI)
         }
     }
 }

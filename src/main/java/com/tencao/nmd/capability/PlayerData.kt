@@ -11,7 +11,7 @@ import com.tencao.nmd.api.LootSettingsEnum
 import com.tencao.nmd.data.ClientLootObject
 import com.tencao.nmd.data.SimpleStack
 import com.tencao.nmd.drops.LootRegistry
-import com.tencao.nmd.gui.ItemRollGUI
+import com.tencao.nmd.gui.LootGUI
 import com.tencao.nmd.network.packets.LootSettingPKT
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.entity.player.EntityPlayerMP
@@ -20,7 +20,6 @@ import net.minecraft.nbt.NBTBase
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.nbt.NBTTagList
 import net.minecraft.util.EnumFacing
-import net.minecraft.util.NonNullList
 import net.minecraft.util.ResourceLocation
 import net.minecraftforge.common.capabilities.Capability
 import net.minecraftforge.common.capabilities.CapabilityInject
@@ -57,21 +56,19 @@ class PlayerData : AbstractEntityCapability() {
         return itemBlacklist.any { it.test(itemStack) }
     }
 
-    fun setItemList(items: NonNullList<ItemStack>){
+    fun setItemList(items: HashSet<SimpleStack>){
         itemBlacklist.clear()
-        items.forEach { itemBlacklist.add(SimpleStack(it)) }
+        items.forEach { itemBlacklist.add(it) }
     }
 
-    fun getItemList(): NonNullList<ItemStack> {
-        val items: NonNullList<ItemStack> = NonNullList.create()
-        itemBlacklist.forEach{ it -> items.add(it.toStack())}
-        return items
+    fun getItemList(): HashSet<ItemStack> {
+        return itemBlacklist.asSequence().map { it.toStack() }.toHashSet()
     }
 
     fun tickLoot(){
         lootDrops.removeAll {
             if (--it.tickTime <= 0){
-                ItemRollGUI.recalculateFrom(it.lootSetting)
+                LootGUI.recalculateFrom(it.lootSetting)
                 return@removeAll true
             }
             false
@@ -114,9 +111,9 @@ class PlayerData : AbstractEntityCapability() {
 
             instance.itemBlacklist.forEach{it ->
                 val itemInfo = NBTTagCompound()
-                itemInfo.setString("name", it.resource.toString())
-                itemInfo.setInteger("count", it.count)
                 itemInfo.setInteger("id", it.id)
+                itemInfo.setInteger("count", it.count)
+                itemInfo.setInteger("meta", it.meta)
                 itemInfo.setTag("nbt", it.nbt)
             }
 
@@ -134,7 +131,7 @@ class PlayerData : AbstractEntityCapability() {
             var tag: NBTTagCompound
             for (i in 0 until itemCount) {
                 tag = items.getCompoundTagAt(i)
-                instance.itemBlacklist.add(SimpleStack(ResourceLocation(tag.getString("name")), tag.getInteger("count"), tag.getInteger("id"), tag.getTag("nbt") as NBTTagCompound))
+                instance.itemBlacklist.add(SimpleStack(tag.getInteger("id"), tag.getInteger("count"), tag.getInteger("meta"), tag.getTag("nbt") as NBTTagCompound))
             }
         }
 

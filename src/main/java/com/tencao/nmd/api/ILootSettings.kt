@@ -3,7 +3,7 @@ package com.tencao.nmd.api
 import be.bluexin.saomclib.party.IParty
 import com.tencao.nmd.data.ClientLootObject
 import com.tencao.nmd.data.SimpleEntityItem
-import com.tencao.nmd.gui.ItemRollGUI
+import com.tencao.nmd.gui.LootGUI
 import io.netty.buffer.ByteBuf
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.ScaledResolution
@@ -23,16 +23,24 @@ interface ILootSettings {
      * This is called last once everything else has been processed
      * @param entityItem The data object containing the loot
      * @param party The party tied to the loot
-     * @param cache The cache object, only present on ISpecialLoot
+     * @param serverCache The cache object, only present on ISpecialLoot
      * @return Returns the updated cache back, null if no changes
      */
-    fun handleLoot(entityItem: SimpleEntityItem, party: IParty, cache: Any?): Any?
+    fun handleLoot(entityItem: SimpleEntityItem, party: IParty, serverCache: Any?): Any?
 
     /**
      * Creates a new server cache instance for the loot drop.
      */
     fun createServerCache(party: IParty): Any?{
         return null
+    }
+
+    /**
+     * If true, this will store one cache per party and maintain it,
+     * otherwise it will create a new cache everytime
+     */
+    fun persistentCache(): Boolean {
+        return false
     }
 }
 
@@ -90,7 +98,7 @@ interface ISpecialLootSettings: ILootSettings {
      * @param isFullRender False = Ingame, True = GUILootScreen
      * @param clientData The temp storage used by the loot setting
      */
-    fun renderLootWindow(gui: ItemRollGUI, sr: ScaledResolution, cursorX: Int, cursorY: Int, isFullRender: Boolean, clientData: ClientLootObject)
+    fun renderLootWindow(gui: LootGUI, sr: ScaledResolution, cursorX: Int, cursorY: Int, isFullRender: Boolean, clientData: ClientLootObject)
 
     /**
      * When a mouse clicks on the GUILootScreen
@@ -102,7 +110,23 @@ interface ISpecialLootSettings: ILootSettings {
      * @return Return true to send a packet back to the server
      * containing the cache
      */
-    fun onClick(mc: Minecraft, cursorX: Int, cursorY: Int, state: Int, clientData: ClientLootObject): Boolean
+    fun onClick(mc: Minecraft, cursorX: Int, cursorY: Int, state: Int, clientData: ClientLootObject): Boolean {
+        return false
+    }
+
+    /**
+     * When a mouse clicks on the GUILootScreen
+     * @param typedChar Character on the key
+     * @param keyCode lwjgl Keyboard key code
+     * @param state The mouse state
+     * @param clientData The data object containing the cache,
+     * stack, and remaining tick time
+     * @return Return true to send a packet back to the server
+     * containing the cache
+     */
+    fun keyTyped(mc: Minecraft,typedChar: Char, keyCode: Int, clientData: ClientLootObject): Boolean {
+        return false
+    }
 
     /**
      * For creating a cache from transferred data
@@ -147,10 +171,10 @@ interface ISpecialLootSettings: ILootSettings {
      */
     fun drawItemStack(stack: ItemStack, x: Int, y: Int) {
         if (stack.isEmpty) return
-        val itemRenderer = ItemRollGUI.mc.renderItem
+        val itemRenderer = LootGUI.mc.renderItem
         RenderHelper.enableGUIStandardItemLighting()
         GlStateManager.translate(0.0f, 0.0f, 32.0f)
-        val font: net.minecraft.client.gui.FontRenderer = stack.item.getFontRenderer(stack)?: ItemRollGUI.mc.fontRenderer
+        val font: net.minecraft.client.gui.FontRenderer = stack.item.getFontRenderer(stack)?: LootGUI.mc.fontRenderer
         itemRenderer.zLevel = 200.0f
         itemRenderer.renderItemAndEffectIntoGUI(stack, x, y)
         itemRenderer.renderItemOverlayIntoGUI(font, stack, x, y - 0, "")

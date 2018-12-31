@@ -101,7 +101,7 @@ object LootConditionHelper {
             if (lootCacheEntry.min < 0) lootCacheEntry.min = 0
             lootCacheEntry.max = MathHelper.floor(lootFunction.countRange.max)
         } else if (lootFunction is SetMetadata)
-            lootCacheEntry.stack.id = (MathHelper.floor(lootFunction.metaRange.min))
+            lootCacheEntry.stack.meta = (MathHelper.floor(lootFunction.metaRange.min))
     }
 }
 

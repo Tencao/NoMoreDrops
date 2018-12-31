@@ -18,22 +18,21 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
  * This is the GUI that is called when starting a Need or Greed roll
  */
 @Mod.EventBusSubscriber
-object ItemRollGUI : GuiScreen() {
+object LootGUI : GuiScreen() {
 
     private var testStack: ItemStack = ItemStack.EMPTY
+    private var lastFocus: ClientLootObject? = null
 
     init {
         mc = Minecraft.getMinecraft()
         testStack = ItemStack(Items.NETHER_STAR)
     }
 
-    override fun initGui() {
-        super.initGui()
-    }
-
     override fun drawScreen(cursorX: Int, cursorY: Int, partialTicks: Float) {
         draw(cursorX, cursorY, true)
     }
+
+
 
     fun draw (cursorX: Int, cursorY: Int, isFullRender: Boolean){
         // More accurate count of rendered objects vs index
@@ -97,12 +96,17 @@ object ItemRollGUI : GuiScreen() {
 
     override fun mouseReleased(mouseX: Int, mouseY: Int, state: Int) {
         mc.player.getNMDData().lootDrops.firstOrNull { it.lootSetting.onClick(mc, mouseX, mouseY, state, it) }?.let {
-            PacketPipeline.sendToServer(LootServerPKT(it.rollID, it.lootSetting, it.clientCache))
             mc.player.getNMDData().lootDrops.remove(it)
+            PacketPipeline.sendToServer(LootServerPKT(it.rollID, it.lootSetting, it.clientCache))
             if (it.lootSetting.isListed || it.lootSetting.recieveLastLootPosition)
                 recalculateFrom(it.lootSetting)
-
         }
+        lastFocus = mc.player.getNMDData().lootDrops.firstOrNull { mouseX >= it.x && mouseX <= it.x + it.lootSetting.width && mouseY >= it.y && mouseY <= it.y + it.lootSetting.height }
+    }
+
+    override fun keyTyped(typedChar: Char, keyCode: Int) {
+        lastFocus?.lootSetting?.keyTyped(mc, typedChar, keyCode, lastFocus!!)
+        super.keyTyped(typedChar, keyCode)
     }
 
     /**
@@ -117,6 +121,10 @@ object ItemRollGUI : GuiScreen() {
         if (event.type == RenderGameOverlayEvent.ElementType.TEXT && mc.currentScreen != this) {
             draw(0, 0, false)
         }
+    }
+
+    override fun onGuiClosed() {
+        super.onGuiClosed()
     }
 
 }
