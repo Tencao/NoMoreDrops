@@ -1,7 +1,8 @@
 package com.tencao.nmd.drops
 
 import be.bluexin.saomclib.party.IParty
-import com.google.common.collect.ImmutableSet
+import com.google.common.collect.ImmutableList
+import com.google.common.collect.ImmutableMap
 import com.tencao.nmd.api.ILootSettings
 import com.tencao.nmd.api.IRarity
 import com.tencao.nmd.data.ServerLootObject
@@ -10,43 +11,35 @@ object LootRegistry {
 
     val lootdrops = mutableListOf<ServerLootObject>()
 
-    private lateinit var registeredLootSettings: ImmutableSet<Pair<ILootSettings, String>>
-    private lateinit var registeredRarity: ImmutableSet<Pair<IRarity, String>>
-    lateinit var defaultLootPairings: ImmutableSet<Pair<ILootSettings, IRarity>>
+    private lateinit var registeredLootSettings: ImmutableList<ILootSettings>
+    private lateinit var registeredRarity: ImmutableList<IRarity>
+    lateinit var defaultLootPairings: ImmutableMap<IRarity,ILootSettings>
     private val serverLootCache: LinkedHashMap<ILootSettings, Pair<IParty, Any?>> = linkedMapOf()
 
     fun getRegisteredLoot(name: String): ILootSettings{
-        return registeredLootSettings.first { it.second.equals(name, true) }.first
+        return registeredLootSettings.first { it.toString().equals(name, true) }
     }
 
     fun getRegisteredRarity(name: String): IRarity{
-        return registeredRarity.first { it.second.equals(name, true) }.first
+        return registeredRarity.first { it.toString().equals(name, true) }
     }
 
-    fun registerDefaults(list: List<Pair<ILootSettings, IRarity>>){
-        val lootSettingBuilder = ImmutableSet.builder<Pair<ILootSettings, String>>()
-        val rarityBuilder = ImmutableSet.builder<Pair<IRarity, String>>()
-        val defaultLootPairingsBuilder = LinkedHashSet<Pair<ILootSettings, IRarity>>()
-        list.forEachIndexed { _, pair ->
-            lootSettingBuilder.add(Pair(pair.first, pair.first.toString()))
-            rarityBuilder.add(Pair(pair.second, pair.second.toString()))
-            defaultLootPairingsBuilder.asSequence().none { it.second == pair.second }.let { defaultLootPairingsBuilder.add(pair) }
-        }
-        registeredLootSettings = lootSettingBuilder.build()
-        registeredRarity = rarityBuilder.build()
-        defaultLootPairings = ImmutableSet.copyOf(defaultLootPairingsBuilder)
+    fun registerDefaults(lootsettings: LinkedHashMap<IRarity, ILootSettings>, lootOptions: HashSet<ILootSettings>, rarities: HashSet<IRarity>){
+        registeredLootSettings = ImmutableList.copyOf(lootOptions)
+        registeredRarity = ImmutableList.copyOf(rarities)
+        defaultLootPairings = ImmutableMap.copyOf(lootsettings)
     }
 
     fun getServerLootCache(lootSettings: ILootSettings, party: IParty): Any? {
-        if (lootSettings.persistentCache()){
+        return if (lootSettings.persistentCache()){
             var cache = serverLootCache[lootSettings]?.second
             if (cache == null){
                 cache = lootSettings.createServerCache(party)
                 serverLootCache[lootSettings] = Pair(party, cache)
             }
-            return cache
+            cache
         }
-        else return lootSettings.createServerCache(party)
+        else lootSettings.createServerCache(party)
     }
 
     fun updateServerCache(lootSettings: ILootSettings, party: IParty, cache: Any){
@@ -56,6 +49,11 @@ object LootRegistry {
 
     fun removeServerLootCache(party: IParty){
         serverLootCache.values.removeIf { it.first == party }
+    }
+
+    fun getNextLootSetting(lootSettings: ILootSettings): ILootSettings{
+        var index = registeredLootSettings.indexOf(lootSettings)
+        return if (++index >= registeredLootSettings.size) registeredLootSettings[0] else registeredLootSettings[index]
     }
 
 }

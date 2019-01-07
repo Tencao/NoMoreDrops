@@ -1,10 +1,8 @@
 package com.tencao.nmd.events
 
 import be.bluexin.saomclib.party.IParty
-import com.tencao.nmd.api.DropRarityEnum
 import com.tencao.nmd.api.ILootSettings
 import com.tencao.nmd.api.IRarity
-import com.tencao.nmd.api.LootSettingsEnum
 import com.tencao.nmd.data.SimpleEntityItem
 import net.minecraftforge.fml.common.eventhandler.Event
 import java.util.*
@@ -12,22 +10,40 @@ import java.util.*
 
 class PartyLootEvent(val entityItem: SimpleEntityItem, val party: IParty, var lootSetting: ILootSettings, var dropRarity: IRarity, val rollID: UUID): Event()
 
-class RegisterLootRarity(private val lootSettings: LinkedList<Pair<ILootSettings, IRarity>>): Event(){
+class RegisterLootRarity(private val lootSettings: LinkedHashMap<IRarity, ILootSettings>, private val lootOptions: HashSet<ILootSettings>, private val rarities: HashSet<IRarity>): Event(){
 
-    fun registerLootRarity(lootSetting: ILootSettings, rarity: IRarity){
-        lootSettings.add(Pair(lootSetting, rarity))
+    constructor(): this(linkedMapOf<IRarity, ILootSettings>(), hashSetOf(), hashSetOf())
+
+    fun registerLootRarity(rarity: IRarity, lootSetting: ILootSettings){
+        lootSettings.putIfAbsent(rarity, lootSetting)
+        lootOptions.add(lootSetting)
+        rarities.add(rarity)
     }
 
+    fun overrideLootRarity(rarity: IRarity, lootSetting: ILootSettings){
+        lootSettings[rarity] = lootSetting
+        lootOptions.add(lootSetting)
+        rarities.add(rarity)
+    }
+
+
     fun registerRarity(rarity: IRarity){
-        lootSettings.add(Pair(LootSettingsEnum.Random, rarity))
+        rarities.add(rarity)
     }
 
     fun registerLootSettings(lootSetting: ILootSettings){
-        lootSettings.add(Pair(lootSetting, DropRarityEnum.UNKNOWN))
+        lootOptions.add(lootSetting)
     }
 
-    fun getLootSettings(): List<Pair<ILootSettings, IRarity>>{
-        return lootSettings.toList()
+    fun getLootSettings(): LinkedHashMap<IRarity, ILootSettings>{
+        return lootSettings
     }
 
+    fun getLootOptions(): HashSet<ILootSettings>{
+        return lootOptions
+    }
+
+    fun getRarities(): HashSet<IRarity>{
+        return rarities
+    }
 }

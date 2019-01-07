@@ -1,9 +1,12 @@
 package com.tencao.nmd.network.packets
 
-import be.bluexin.saomclib.packets.AbstractClientPacketHandler
+import be.bluexin.saomclib.packets.AbstractPacketHandler
 import be.bluexin.saomclib.readString
 import be.bluexin.saomclib.writeString
-import com.tencao.nmd.api.*
+import com.tencao.nmd.api.DropRarityEnum
+import com.tencao.nmd.api.ILootSettings
+import com.tencao.nmd.api.IRarity
+import com.tencao.nmd.api.LootSettingsEnum
 import com.tencao.nmd.capability.getNMDData
 import com.tencao.nmd.drops.LootRegistry
 import io.netty.buffer.ByteBuf
@@ -15,30 +18,37 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext
 
 class LootSettingPKT(): IMessage {
 
-    private var lootSetting : ILootSettings = LootSettingsEnum.Random
     private var rarity : IRarity = DropRarityEnum.UNKNOWN
+    private var lootSetting : ILootSettings = LootSettingsEnum.Random
 
-    constructor(lootSettingsEnum: ILootSettings, dropRarityEnum: IRarity): this(){
-        this.lootSetting = lootSettingsEnum
-        this.rarity = dropRarityEnum
+    constructor(rarity: IRarity, lootSettings: ILootSettings): this(){
+        this.rarity = rarity
+        this.lootSetting = lootSettings
     }
 
     override fun fromBytes(buf: ByteBuf) {
-        this.lootSetting = LootRegistry.getRegisteredLoot(buf.readString())
         this.rarity = LootRegistry.getRegisteredRarity(buf.readString())
+        this.lootSetting = LootRegistry.getRegisteredLoot(buf.readString())
     }
 
     override fun toBytes(buf: ByteBuf) {
-        buf.writeString(lootSetting.toString())
         buf.writeString(rarity.toString())
+        buf.writeString(lootSetting.toString())
     }
 
     companion object {
-        class Handler : AbstractClientPacketHandler<LootSettingPKT>(){
+        class Handler : AbstractPacketHandler<LootSettingPKT>(){
             override fun handleClientPacket(player: EntityPlayer, message: LootSettingPKT, ctx: MessageContext, mainThread: IThreadListener): IMessage? {
                 mainThread.addScheduledTask {
-                    player.getNMDData().setLootSetting( message.lootSetting, message.rarity)
+                    player.getNMDData().setLootSetting( message.rarity, message.lootSetting,  false)
                     player.sendStatusMessage(TextComponentTranslation("nmd.lootsetting.changed"), false)
+                }
+                return null
+            }
+
+            override fun handleServerPacket(player: EntityPlayer, message: LootSettingPKT, ctx: MessageContext, mainThread: IThreadListener): IMessage? {
+                mainThread.addScheduledTask {
+                    player.getNMDData().setLootSetting(message.rarity, message.lootSetting, true)
                 }
                 return null
             }

@@ -3,6 +3,7 @@ package com.tencao.nmd.capability
 import be.bluexin.saomclib.capabilities.AbstractCapability
 import be.bluexin.saomclib.capabilities.AbstractEntityCapability
 import be.bluexin.saomclib.capabilities.Key
+import be.bluexin.saomclib.capabilities.getPartyCapability
 import be.bluexin.saomclib.packets.PacketPipeline
 import com.tencao.nmd.NMDCore
 import com.tencao.nmd.api.ILootSettings
@@ -32,7 +33,15 @@ class PlayerData : AbstractEntityCapability() {
     lateinit var player: EntityPlayer
         private set
 
-    val lootSettings: LinkedHashSet<Pair<ILootSettings, IRarity>> = LinkedHashSet()
+    val lootSettings: LinkedHashMap<IRarity, ILootSettings> = linkedMapOf()
+    get() {
+        //Sanity Check
+        if (field.isEmpty()){
+            //In rare cases this is empty, rebuild the map
+            LootRegistry.defaultLootPairings.toMap(field)
+        }
+        return field
+    }
 
     // Block Loot will always be classed as Unknown rarity
     var extraBlocksAsLoot = false
@@ -44,7 +53,7 @@ class PlayerData : AbstractEntityCapability() {
     override fun setup(param: Any): AbstractCapability {
         super.setup(param)
         this.player = param as EntityPlayer
-        lootSettings.addAll(LootRegistry.defaultLootPairings)
+        LootRegistry.defaultLootPairings.toMap(lootSettings)
         return this
     }
 
@@ -75,25 +84,35 @@ class PlayerData : AbstractEntityCapability() {
         }
     }
 
-    fun setLootSetting(lootSettingsEnum: ILootSettings, dropRarityEnum: IRarity){
-        lootSettings.removeIf{ it.second == dropRarityEnum}
-        lootSettings.add(Pair(lootSettingsEnum, dropRarityEnum))
-        if (!player.world.isRemote)
-            PacketPipeline.sendTo(LootSettingPKT(lootSettingsEnum, dropRarityEnum), player as EntityPlayerMP)
+    /**
+     * @param sync If true, it will send a sync packet to the server/client
+     */
+    fun setLootSetting(rarity: IRarity, lootSetting: ILootSettings, sync: Boolean){
+        if (!player.world.isRemote && player.getPartyCapability().getOrCreatePT().isLeader(player)){
+            player.getPartyCapability().getOrCreatePT().members
+                    .asSequence()
+                    .filter { it != player }
+                    .forEach {partyMember -> partyMember.getNMDData().setLootSetting(rarity, lootSetting, sync)
+            }
+        }
+        lootSettings.replace(rarity, lootSetting)
+        if (!player.world.isRemote && sync) {
+            PacketPipeline.sendTo(LootSettingPKT(rarity, lootSetting), player as EntityPlayerMP)
+        }
     }
 
-    fun setLootSetting(lootSettings: LinkedHashSet<Pair<ILootSettings, IRarity>>){
+    fun setLootSetting(lootSettings: LinkedHashMap<IRarity, ILootSettings>){
         this.lootSettings.clear()
-        this.lootSettings.addAll(lootSettings)
+        this.lootSettings.putAll(lootSettings)
     }
 
     fun resetLootSettings(){
         this.lootSettings.clear()
-        this.lootSettings.addAll(LootRegistry.defaultLootPairings)
+        this.lootSettings.putAll(LootRegistry.defaultLootPairings)
     }
 
     fun getLootSetting(rarity: IRarity): ILootSettings {
-        return lootSettings.firstOrNull { it.second == rarity }?.first ?: LootSettingsEnum.Random
+        return lootSettings[rarity]?: LootSettingsEnum.Random
     }
 
     override val shouldSyncOnDeath = true

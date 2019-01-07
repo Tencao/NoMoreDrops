@@ -14,6 +14,7 @@ import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.network.PacketBuffer
+import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
 import java.util.*
 import java.util.function.Predicate
@@ -142,21 +143,21 @@ data class SimpleStack(val id: Int, var count: Int, var meta: Int, var nbt: NBTT
 }
 
 
-data class SimpleEntityItem(val simpleStack: SimpleStack, val x: Double, val y: Double, val z: Double, val world: World) {
+data class SimpleEntityItem(val simpleStack: SimpleStack, val pos: BlockPos, val world: World) {
 
-    constructor(itemStack: ItemStack, x: Double, y: Double, z:Double, world: World): this(SimpleStack(itemStack), x, y, z, world)
+    constructor(itemStack: ItemStack, pos: BlockPos, world: World): this(SimpleStack(itemStack), pos, world)
 
-    constructor(entityItem: EntityItem): this(SimpleStack(entityItem.item.copy()), entityItem.posX, entityItem.posY, entityItem.posZ, entityItem.world)
+    constructor(entityItem: EntityItem): this(SimpleStack(entityItem.item.copy()), BlockPos(entityItem), entityItem.world)
 
     fun spawnEntityItem(){
-        world.spawnEntity(EntityItem(world, x, y, z, toStack()))
+        world.spawnEntity(EntityItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), toStack()))
     }
 
     /**
      * Used to drop the loot item while still assigning the loot to players
      */
     fun spawnEntityPartyItem(party: IParty){
-        world.spawnEntity(EntityPartyItem(world, x, y, z, toStack(), party.members.asSequence().map { player -> player.uniqueID }.toHashSet()))
+        world.spawnEntity(EntityPartyItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), toStack(), party.members.asSequence().map { player -> player.uniqueID }.toHashSet()))
     }
 
     fun toStack(): ItemStack {
@@ -179,9 +180,24 @@ data class SimpleEntityItem(val simpleStack: SimpleStack, val x: Double, val y: 
      * Returns the squared distance to the entity.
      */
     fun getDistanceSq(entityIn: Entity): Double {
-        val d0 = this.x - entityIn.posX
-        val d1 = this.y - entityIn.posY
-        val d2 = this.z - entityIn.posZ
+        val d0 = this.pos.x - entityIn.posX
+        val d1 = this.pos.y - entityIn.posY
+        val d2 = this.pos.z - entityIn.posZ
         return d0 * d0 + d1 * d1 + d2 * d2
     }
+}
+
+data class MobCache (val world: World, val pos: BlockPos, var tickTime: Int): Predicate<EntityItem>{
+
+    constructor(world: World, pos: BlockPos): this(world, pos, 0)
+
+    //Returns true to remove cache entry
+    fun tick(): Boolean{
+        return ++tickTime > 40
+    }
+
+    override fun test(t: EntityItem): Boolean {
+        return world == t.world && pos == BlockPos(t)
+    }
+
 }

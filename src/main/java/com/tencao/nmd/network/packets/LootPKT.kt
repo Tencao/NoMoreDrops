@@ -28,7 +28,7 @@ class LootClientPKT(): IMessage {
     private var timer: Int = 0
     private var rollID: UUID = UUID.randomUUID()
     private var rarity: IRarity = DropRarityEnum.UNKNOWN
-    private var lootSetting : ISpecialLootSettings = SpecialLootSettingsEnum.NeedBeforeGreed
+    private var lootSetting : ISpecialLootSettings = SpecialLootSettingsEnum.NeedOrGreed
 
     constructor(itemStack: SimpleStack, timer: Int, rollID: UUID, rarity: IRarity, lootSetting: ISpecialLootSettings): this(){
         this.stack = itemStack
@@ -59,7 +59,7 @@ class LootClientPKT(): IMessage {
             override fun handleClientPacket(player: EntityPlayer, message: LootClientPKT, ctx: MessageContext, mainThread: IThreadListener): IMessage? {
                 mainThread.addScheduledTask {
                     val nmdData = player.getNMDData()
-                    val clientLootObject = ClientLootObject(message.stack, message.rollID, message.timer, message.rarity, message.lootSetting, message.lootSetting.createClientCache(message.stack.toStack(), player.getPartyCapability().party!!))
+                    val clientLootObject = ClientLootObject(message.stack, message.rollID, message.timer, message.rarity, message.lootSetting, message.lootSetting.createClientCache(message.stack.toStack(), player.getPartyCapability().getOrCreatePT()))
                     nmdData.lootDrops.add(clientLootObject)
                     LootGUI.calculateXY(clientLootObject)
                 }
@@ -73,7 +73,7 @@ class LootClientPKT(): IMessage {
 class LootServerPKT(): IMessage {
 
     private var rollID: UUID = UUID.randomUUID()
-    private var lootSetting : ISpecialLootSettings = SpecialLootSettingsEnum.NeedBeforeGreed
+    private var lootSetting : ISpecialLootSettings = SpecialLootSettingsEnum.NeedOrGreed
     private var cache: Any? = null
 
     constructor(rollID: UUID, lootSetting: ISpecialLootSettings, cache: Any?): this(){

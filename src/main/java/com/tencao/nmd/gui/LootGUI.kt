@@ -1,40 +1,71 @@
 package com.tencao.nmd.gui
 
+import be.bluexin.saomclib.capabilities.getPartyCapability
 import be.bluexin.saomclib.packets.PacketPipeline
 import com.tencao.nmd.api.ISpecialLootSettings
 import com.tencao.nmd.capability.getNMDData
 import com.tencao.nmd.data.ClientLootObject
+import com.tencao.nmd.drops.LootRegistry
+import com.tencao.nmd.gui.buttons.GUILootButton
 import com.tencao.nmd.network.packets.LootServerPKT
+import com.tencao.nmd.network.packets.LootSettingPKT
+import com.tencao.nmd.util.ModHelper
+import com.tencao.nmd.util.PartyHelper
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.GuiButton
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.client.gui.ScaledResolution
-import net.minecraft.init.Items
-import net.minecraft.item.ItemStack
+import net.minecraft.client.resources.I18n
 import net.minecraftforge.client.event.RenderGameOverlayEvent
-import net.minecraftforge.fml.common.Mod
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 
 /**
  * This is the GUI that is called when starting a Need or Greed roll
  */
-@Mod.EventBusSubscriber
 object LootGUI : GuiScreen() {
 
-    private var testStack: ItemStack = ItemStack.EMPTY
     private var lastFocus: ClientLootObject? = null
+    private lateinit var buttons: ArrayList<GuiButton>
 
     init {
         mc = Minecraft.getMinecraft()
-        testStack = ItemStack(Items.NETHER_STAR)
+    }
+
+    override fun initGui() {
+        super.initGui()
+        val buttons = arrayListOf<GuiButton>()
+
+        val sr = ScaledResolution(mc)
+        buttons.add(GuiButton(0, 20, 10, 150, 20, I18n.format("nmd.lootgui.settings")))
+
+
+        // Only add party options if SAOUI isn't loaded, we don't want to override that.
+        if (!ModHelper.isSAOUILoaded) {
+            buttons.add(GuiButton(1, 200, 10, 150, 20, I18n.format("nmd.lootgui.party")))
+            buttons.add(GuiButton(2, (sr.scaledWidth / 2) - 75, (sr.scaledHeight / 2) - 42, 150, 20, I18n.format("nmd.pt.invite")))
+            buttons.add(GuiButton(3, (sr.scaledWidth / 2) - 75, sr.scaledHeight / 2 - 21, 150, 20, I18n.format("nmd.pt.leave")))
+            buttons.add(GuiButton(4, (sr.scaledWidth / 2) - 75, (sr.scaledHeight / 2), 150, 20, I18n.format("nmd.pt.kick")))
+            buttons.add(GuiButton(5, (sr.scaledWidth / 2) - 75, (sr.scaledHeight / 2) + 21, 150, 20, I18n.format("nmd.pt.disband")))
+            buttons.subList(2, 6).forEach { it.visible = false }
+            buttons.subList(4, 6).forEach { it.enabled = mc.player.getPartyCapability().getOrCreatePT().isLeader(mc.player) }
+        }
+        var count = 0
+        mc.player.getNMDData().lootSettings.forEach { rarity, lootsetting ->
+            val button = GUILootButton(rarity, lootsetting, 5 + ++count, (sr.scaledWidth / 2) - 75, (sr.scaledHeight / 2)  - 70 + (21 * count), 150, 20)
+            button.visible = false
+            buttons.add(button)
+        }
+
+        this.buttons = buttons
+
     }
 
     override fun drawScreen(cursorX: Int, cursorY: Int, partialTicks: Float) {
-        draw(cursorX, cursorY, true)
+        draw(cursorX, cursorY, partialTicks, true)
     }
 
 
-
-    fun draw (cursorX: Int, cursorY: Int, isFullRender: Boolean){
+    fun draw (cursorX: Int, cursorY: Int, partialTicks: Float, isFullRender: Boolean){
         // More accurate count of rendered objects vs index
         var count = 0
         val sr = ScaledResolution(mc)
@@ -46,11 +77,14 @@ object LootGUI : GuiScreen() {
             }
             else {
                 if (!isFullRender && count >= 5) return@forEachIndexed
-                entry.lootSetting.renderLootWindow(this, sr, cursorX, cursorY, isFullRender, entry)
+                entry.lootSetting.renderLootWindow(this, sr, cursorX, cursorY, partialTicks, isFullRender, entry)
                 count++
             }
 
         }
+        if (isFullRender)
+            buttons.forEach { it.drawButton(mc, cursorX, cursorY, partialTicks) }
+
     }
 
     /**
@@ -94,14 +128,79 @@ object LootGUI : GuiScreen() {
                 .forEachIndexed { _, clientLootObject -> calculateXY(clientLootObject) }
     }
 
-    override fun mouseReleased(mouseX: Int, mouseY: Int, state: Int) {
-        mc.player.getNMDData().lootDrops.firstOrNull { it.lootSetting.onClick(mc, mouseX, mouseY, state, it) }?.let {
-            mc.player.getNMDData().lootDrops.remove(it)
-            PacketPipeline.sendToServer(LootServerPKT(it.rollID, it.lootSetting, it.clientCache))
-            if (it.lootSetting.isListed || it.lootSetting.recieveLastLootPosition)
-                recalculateFrom(it.lootSetting)
+    override fun mouseReleased(cursorX: Int, cursorY: Int, state: Int) {
+        buttons.firstOrNull { it.mousePressed(mc, cursorX, cursorY) }?.run {
+            when (this.id) {
+                0 -> {
+                    if (buttons[2].visible)
+                        buttons.subList(2, 6).forEach { it.visible = false }
+                    if (buttons[6].visible)
+                        buttons.subList(6, buttons.size).forEach { it.visible = false }
+                    else
+                        buttons.subList(6, buttons.size).forEach { it.visible = true }
+                }
+                1 -> {
+                    if (buttons[6].visible)
+                        buttons.subList(6, buttons.size).forEach { it.visible = false }
+                    if (buttons[2].visible)
+                        buttons.subList(2, 6).forEach { it.visible = false }
+                    else {
+                        buttons[2].visible = true
+                        if (PartyHelper.isValidParty(mc.player)) {
+                            buttons[3].visible = true
+                            if (mc.player.getPartyCapability().getOrCreatePT().leader == mc.player) {
+                                buttons[4].visible = true
+                                buttons[5].visible = true
+                            } else return@run
+                        } else return@run
+                    }
+                }
+                2 -> {
+                    //TODO Add party invite function
+                }
+                3 -> mc.player.getPartyCapability().getOrCreatePT().removeMember(mc.player)
+                4 -> mc.player.getPartyCapability().getOrCreatePT().dissolve()
+                5 -> {
+                    //TODO Add party kick function
+                }
+
+                else -> {
+                    if (mc.player.getPartyCapability().getOrCreatePT().isLeader(mc.player)) {
+                        if (this is GUILootButton) {
+                            var lootSetting = this.lootSetting
+                            lootSetting = LootRegistry.getNextLootSetting(lootSetting)
+                            PacketPipeline.sendToServer(LootSettingPKT(this.rarity, lootSetting))
+                            this.updateLootSetting(lootSetting)
+                        }
+                    }
+                }
+            }
         }
-        lastFocus = mc.player.getNMDData().lootDrops.firstOrNull { mouseX >= it.x && mouseX <= it.x + it.lootSetting.width && mouseY >= it.y && mouseY <= it.y + it.lootSetting.height }
+        mc.player.getNMDData().lootDrops
+                .firstOrNull { it.lootSetting.isMouseOver(mc, cursorX, cursorY, it) }
+                ?.run {
+                    if (this.lootSetting.onClick(mc, cursorX, cursorY, state, this)) {
+                        mc.player.getNMDData().lootDrops.remove(this)
+                        PacketPipeline.sendToServer(LootServerPKT(this.rollID, this.lootSetting, this.clientCache))
+                        if (this.lootSetting.isListed || this.lootSetting.recieveLastLootPosition)
+                            recalculateFrom(this.lootSetting)
+
+                        lastFocus = null
+
+                        // Checks to see if an element was clicked, if so, reset focus and check remaining loot entries.
+                        // If none are left, close the GUIScreen
+                        if (mc.player.getNMDData().lootDrops.isEmpty()) {
+                            this@LootGUI.mc.displayGuiScreen(null)
+
+                            if (this@LootGUI.mc.currentScreen == null) {
+                                this@LootGUI.mc.setIngameFocus()
+                            }
+                        }
+                    } else {
+                        lastFocus = this
+                    }
+                }
+
     }
 
     override fun keyTyped(typedChar: Char, keyCode: Int) {
@@ -119,7 +218,7 @@ object LootGUI : GuiScreen() {
     @SubscribeEvent
     fun renderOverlay(event: RenderGameOverlayEvent){
         if (event.type == RenderGameOverlayEvent.ElementType.TEXT && mc.currentScreen != this) {
-            draw(0, 0, false)
+            draw(0, 0, 0f, false)
         }
     }
 

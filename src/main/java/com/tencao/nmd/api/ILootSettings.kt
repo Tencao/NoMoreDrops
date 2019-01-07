@@ -20,6 +20,11 @@ import net.minecraft.item.ItemStack
 interface ILootSettings {
 
     /**
+     * Display name for buttons
+     */
+    val displayName: String
+
+    /**
      * This is called last once everything else has been processed
      * @param entityItem The data object containing the loot
      * @param party The party tied to the loot
@@ -42,6 +47,7 @@ interface ILootSettings {
     fun persistentCache(): Boolean {
         return false
     }
+
 }
 
 /**
@@ -98,7 +104,19 @@ interface ISpecialLootSettings: ILootSettings {
      * @param isFullRender False = Ingame, True = GUILootScreen
      * @param clientData The temp storage used by the loot setting
      */
-    fun renderLootWindow(gui: LootGUI, sr: ScaledResolution, cursorX: Int, cursorY: Int, isFullRender: Boolean, clientData: ClientLootObject)
+    fun renderLootWindow(gui: LootGUI, sr: ScaledResolution, cursorX: Int, cursorY: Int, partialTicks: Float, isFullRender: Boolean, clientData: ClientLootObject)
+
+    /**
+     * This is called before onClick. If onClick doesn't return true
+     * this will set the focus to this element, forwarding all keyboard
+     * input to the element
+     * @param cursorX Cursors X position onscreen
+     * @param cursorY Cursors Y position onscreen
+     * @param clientData The data object containing the cache,
+     * stack, and remaining tick time
+     * @return Return true if mouse is over, or false if not
+     */
+    fun isMouseOver(mc: Minecraft, cursorX: Int, cursorY: Int, clientData: ClientLootObject): Boolean
 
     /**
      * When a mouse clicks on the GUILootScreen
@@ -118,7 +136,6 @@ interface ISpecialLootSettings: ILootSettings {
      * When a mouse clicks on the GUILootScreen
      * @param typedChar Character on the key
      * @param keyCode lwjgl Keyboard key code
-     * @param state The mouse state
      * @param clientData The data object containing the cache,
      * stack, and remaining tick time
      * @return Return true to send a packet back to the server

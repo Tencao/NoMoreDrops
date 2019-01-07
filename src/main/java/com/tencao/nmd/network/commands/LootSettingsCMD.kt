@@ -1,18 +1,15 @@
 package com.tencao.nmd.network.commands
 
 import be.bluexin.saomclib.capabilities.getPartyCapability
-import be.bluexin.saomclib.packets.PacketPipeline
 import com.google.common.collect.ImmutableList
 import com.tencao.nmd.api.DropRarityEnum
-import com.tencao.nmd.capability.getNMDData
 import com.tencao.nmd.api.LootSettingsEnum
-import com.tencao.nmd.network.packets.LootSettingPKT
+import com.tencao.nmd.capability.getNMDData
 import com.tencao.nmd.util.LowerCasePrefixPredicate
 import com.tencao.nmd.util.PlayerHelper
 import net.minecraft.command.CommandException
 import net.minecraft.command.ICommandSender
 import net.minecraft.entity.player.EntityPlayer
-import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.server.MinecraftServer
 import net.minecraft.util.math.BlockPos
 import net.minecraft.util.text.TextComponentTranslation
@@ -34,7 +31,7 @@ object LootSettingsCMD : NMDCommandBase() {
 
     override fun checkPermission(server: MinecraftServer, sender: ICommandSender): Boolean {
         val player = if (PlayerHelper.isPlayer(sender.commandSenderEntity)) sender.commandSenderEntity as EntityPlayer else return false
-        return player.getPartyCapability().party?.isLeader(player) == true
+        return player.getPartyCapability().getOrCreatePT().isLeader(player)
     }
 
     override fun getTabCompletions(server: MinecraftServer, sender: ICommandSender, params: Array<String>, pos: BlockPos?): List<String> {
@@ -56,10 +53,7 @@ object LootSettingsCMD : NMDCommandBase() {
         try {
             val rarity = DropRarityEnum.valueOf(params[0].toLowerCase(Locale.ROOT))
             val lootSettings = LootSettingsEnum.valueOf(params[1].toLowerCase(Locale.ROOT))
-            (sender as EntityPlayer).getNMDData().setLootSetting(lootSettings, rarity)
-            (sender).getPartyCapability().party?.members?.forEach {
-                PacketPipeline.sendTo(LootSettingPKT(lootSettings, rarity), it as EntityPlayerMP)
-            }
+            (sender as EntityPlayer).getNMDData().setLootSetting(rarity, lootSettings,true)
         } catch (e: Exception){
             sendError(sender, TextComponentTranslation("nmd.lootsetting.null"))
         }

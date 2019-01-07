@@ -19,8 +19,12 @@ import kotlin.collections.HashSet
 
 object PartyHelper {
 
-    fun isValidParty(party: Any?): Boolean{
-        return party is IParty && party.size > 0
+    fun isValidParty(party: IParty?): Boolean{
+        return party is IParty && party.size > 1
+    }
+
+    fun isValidParty(player: EntityPlayer?): Boolean{
+        return player is EntityPlayer && isValidParty(player.getPartyCapability().getOrCreatePT())
     }
 
     /**
@@ -31,17 +35,16 @@ object PartyHelper {
      */
     fun sendLootPacket(entityItem: SimpleEntityItem, party: IParty, rarity: IRarity, lootSettings: ISpecialLootSettings, rollID: UUID) {
         //We're adding an additional 20 ticks to compensate for lag during packet sending
+
         val time: Long = FMLCommonHandler.instance().minecraftServerInstance.getWorld(0).totalWorldTime + (NMDConfig.loot.LootRollTimer * 20).toLong() + 20L
-        val rollData = HashSet<RollData>()
         party.members.forEach {
             PacketPipeline.sendTo(LootClientPKT(entityItem.simpleStack, NMDConfig.loot.LootRollTimer * 20, rollID, rarity, lootSettings), it as EntityPlayerMP)
-            rollData.add(RollData(it.uniqueID))
         }
         LootRegistry.lootdrops.add(ServerLootObject(entityItem, party, time, rollID, lootSettings, LootRegistry.getServerLootCache(lootSettings, party)))
     }
 
     fun addExpToParty(player: EntityPlayer, exp: Int){
-        val selectedMembers = player.getPartyCapability().party?.members?.filter { player.getDistanceSq(it) <= PlayerHelper.squareSum(128) } ?: sequenceOf(player)
+        val selectedMembers = player.getPartyCapability().getOrCreatePT().members.filter { player.getDistanceSq(it) <= PlayerHelper.squareSum(128) }
         val givenExp = exp / selectedMembers.count()
         selectedMembers.forEach { it.addExperience(givenExp) }
     }

@@ -23,6 +23,9 @@ import java.awt.Color
 
 enum class LootSettingsEnum: ILootSettings {
     Random{
+
+        override val displayName: String = "Random"
+
         override fun handleLoot(entityItem: SimpleEntityItem, party: IParty, serverCache: Any?) {
             val partyMembers = party.members.filter { pl -> !pl.getNMDData().isBlackListed(entityItem.toStack()) && entityItem.getDistanceSq(pl) <= PlayerHelper.squareSum(64) }.toMutableList()
             if (partyMembers.isNotEmpty()) {
@@ -41,6 +44,9 @@ enum class LootSettingsEnum: ILootSettings {
         }
     },
     RoundRobin{
+
+        override val displayName: String = "Round Robin"
+
         override fun handleLoot(entityItem: SimpleEntityItem, party: IParty, serverCache: Any?): Any? {
             val partyMembers = party.members.filter { pl -> !pl.getNMDData().isBlackListed(entityItem.toStack()) && entityItem.getDistanceSq(pl) <= PlayerHelper.squareSum(64) }.toMutableList()
             var lastMember = serverCache as Int
@@ -74,6 +80,9 @@ enum class LootSettingsEnum: ILootSettings {
 
 enum class SpecialLootSettingsEnum: ISpecialLootSettings {
     MasterLooter{
+
+        override val displayName: String = "Master Looter"
+
         override val width: Int
             get() = TODO("not implemented") //To change initializer of created properties use File | Settings | File Templates.
 
@@ -96,7 +105,7 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
         override val isListed: Boolean
             get() = false
 
-        override fun renderLootWindow(gui: LootGUI, sr: ScaledResolution, cursorX: Int, cursorY: Int, isFullRender: Boolean, clientData: ClientLootObject) {
+        override fun renderLootWindow(gui: LootGUI, sr: ScaledResolution, cursorX: Int, cursorY: Int, partialTicks: Float, isFullRender: Boolean, clientData: ClientLootObject) {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
 
@@ -111,6 +120,10 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
 
         }
 
+        override fun isMouseOver(mc: Minecraft, cursorX: Int, cursorY: Int, clientData: ClientLootObject): Boolean {
+            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
         override fun processClientCache(player: EntityPlayer, clientCache: Any?, serverCache: Any?) {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
@@ -120,7 +133,10 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
         }
 
     },
-    NeedBeforeGreed {
+    NeedOrGreed {
+
+        override val displayName: String = "Need or Greed"
+
         override val width: Int = 158
 
         override val height: Int = 35
@@ -148,7 +164,7 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
         override val isListed: Boolean
             get() = true
 
-        override fun renderLootWindow(gui: LootGUI, sr:ScaledResolution, cursorX: Int, cursorY: Int, isFullRender: Boolean, clientData: ClientLootObject) {
+        override fun renderLootWindow(gui: LootGUI, sr:ScaledResolution, cursorX: Int, cursorY: Int, partialTicks: Float, isFullRender: Boolean, clientData: ClientLootObject) {
             val progress = (barWidth * (clientData.tickTime /(NMDConfig.loot.LootRollTimer * 20f))).toInt()
             gui.mc.renderEngine.bindTexture(ResourceLocation(NMDCore.MODID, "textures/gui/lootgui.png"))
             //Background
@@ -170,6 +186,13 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
             drawItemStack(clientData.stack.toStack(), sr.scaledWidth - clientData.x + 4, sr.scaledHeight - clientData.y + 4)
             gui.mc.fontRenderer.drawString(clientData.stack.toStack().displayName, sr.scaledWidth - clientData.x + 24f, sr.scaledHeight - clientData.y + 5f, 0xFFFFFF, true)
             gui.mc.fontRenderer.drawString( "x${clientData.stack.count}", sr.scaledWidth - clientData.x + 24f, sr.scaledHeight - clientData.y + 16f, 0xFFFFFF, true)
+        }
+
+        override fun isMouseOver(mc: Minecraft, cursorX: Int, cursorY: Int, clientData: ClientLootObject): Boolean {
+            val sr = ScaledResolution(mc)
+            val y = sr.scaledHeight - clientData.y
+            val x = sr.scaledWidth - clientData.x
+            return cursorX >= x && cursorX <= x + width && cursorY >= y && cursorY <= y + height
         }
 
         override fun onClick(mc: Minecraft, cursorX: Int, cursorY: Int, state: Int, clientData: ClientLootObject): Boolean {
@@ -217,7 +240,7 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
                 else {
                     val winningRoll = if (winner.roll < 1) (winner.roll * 100).toInt() else winner.roll.toInt()
                     FMLCommonHandler.instance().minecraftServerInstance.playerList.players.firstOrNull { player -> player.uniqueID == it.uuid }?.let { player ->
-                        if (it.roll < 1 && winner.roll >= 1)
+                        if (it.roll < 1 && winner.roll >= 1 )
                             player.sendMessage(TextComponentTranslation("nmd.loot.needorgreed.needovergreed"))
                         else
                             player.sendMessage(TextComponentTranslation("nmd.loot.needorgreed.roll", roll, winningRoll))
@@ -247,5 +270,6 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
         override fun areConditionsMet(serverCache: Any?): Boolean {
             return (serverCache as HashSet<RollData>).none { it.roll == 0f }
         }
+
     };
 }

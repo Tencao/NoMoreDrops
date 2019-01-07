@@ -27,10 +27,10 @@ import java.util.function.Predicate
 
 object LootTableMapper {
 
-    private val pools = ReflectionHelper.findField(LootTable::class.java, "field_186365_d", "pools")
+    private val getLootTable: Method = ReflectionHelper.findMethod(EntityLiving::class.java, "getLootTable", "func_184647_J")
+    private val pools: Field = ReflectionHelper.findField(LootTable::class.java, "field_186466_c", "pools")
     private val lootEntires: Field = ReflectionHelper.findField(LootPool::class.java, "field_186453_a", "lootEntries")
     private val poolConditions: Field = ReflectionHelper.findField(LootPool::class.java, "field_186454_b", "poolConditions")
-    private val getLootTable: Method = ReflectionHelper.findMethod(EntityLiving::class.java, "getLootTable", "func_184647_J")
     private val lootDropCache: HashSet<LootCacheEntry> = hashSetOf()
     lateinit var manager: LootTableManager
 
