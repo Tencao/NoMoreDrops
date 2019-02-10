@@ -1,6 +1,6 @@
 [
   {
-    "modid": "nmd",
+    "modid": "nmd-core",
     "name": "No More Drops",
     "description": "A Mod designed to reduce the total item drops in the world",
     "version": "${version}",
@@ -10,6 +10,44 @@
       "Tencao"
     ],
     "screenshots": [],
-    "dependencies": ["saomclib"]
+    "parent":"",
+    "dependencies": [
+      "mod_MinecraftForge",
+      "saomclib"
+    ]
+  },
+  {
+    "modid": "nmd-party",
+    "name": "NMD Party Module",
+    "description": "Party module for No More Drops",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "updateUrl": "",
+    "authorList": [
+      "Tencao"
+    ],
+    "screenshots": [],
+    "parent":"nmd-core",
+    "dependencies": [
+      "mod_MinecraftForge",
+      "saomclib"
+    ]
+  },
+  {
+    "modid": "nmd-loot",
+    "name": "NMD Loot Module",
+    "description": "Loot module for No More Drops",
+    "version": "${version}",
+    "mcversion": "${mcversion}",
+    "updateUrl": "",
+    "authorList": [
+      "Tencao"
+    ],
+    "screenshots": [],
+    "parent":"nmd-core",
+    "dependencies": [
+      "mod_MinecraftForge",
+      "saomclib"
+    ]
   }
 ]

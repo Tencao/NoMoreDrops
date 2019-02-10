@@ -86,9 +86,6 @@ idea { module { inheritOutputDirs = true } }
 
 jar {
     classifier = 'universal'
-    manifest {
-        attributes 'FMLAT': 'nmd_at.cfg'
-    }
 }
 
 compileKotlin {

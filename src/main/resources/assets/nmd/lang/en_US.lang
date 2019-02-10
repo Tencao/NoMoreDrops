@@ -11,10 +11,10 @@ nmd.lootsetting.changed=Loot Settings Updated
 nmd.lootsetting.current=Current Loot Settings %s
 nmd.loot_gui=Loot GUI
 
-nmd.loot.needorgreed.winroll=You rolled %s and won
-nmd.loot.needorgreed.roll=You rolled %s, Winning rolled %s
-nmd.loot.needorgreed.won=You won %s x%s
-nmd.loot.needorgreed.needovergreed=You rolled greed, winner rolled need
+nmd.loot.needorgreed.won=You won %s x%s with a %s roll of %s
+nmd.loot.needorgreed.roll=%s won %s with a %s roll of %s
+nmd.loot.needorgreed.noroll=%s was dropped as no one rolled
+nmd.loot.random=%s x%s was randomly distributed to %s
 nmd.lootgui.party=Party Settings
 nmd.lootgui.settings=Loot Settings
 nmd.pt.invite=Invite

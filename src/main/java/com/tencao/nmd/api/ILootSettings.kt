@@ -1,9 +1,9 @@
 package com.tencao.nmd.api
 
 import be.bluexin.saomclib.party.IParty
-import com.tencao.nmd.data.ClientLootObject
-import com.tencao.nmd.data.SimpleEntityItem
-import com.tencao.nmd.gui.LootGUI
+import com.tencao.nmd.party.data.SimpleEntityItem
+import com.tencao.nmd.core.gui.LootGUI
+import com.tencao.nmd.party.data.ClientLootObject
 import io.netty.buffer.ByteBuf
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.ScaledResolution
