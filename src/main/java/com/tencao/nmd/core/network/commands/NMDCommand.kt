@@ -36,7 +36,7 @@ object NMDCommand : NMDCommandBase() {
         if (params.size == 1) {
             return commands.filter (LowerCasePrefixPredicate(params[0]))
         }
-        return ImmutableList.of<String>()
+        return ImmutableList.of()
     }
 
     @Throws(CommandException::class)
@@ -49,9 +49,7 @@ object NMDCommand : NMDCommandBase() {
         if (params.isNotEmpty()) {
             val relayparams = Arrays.copyOfRange(params, 1, params.size)
 
-            val subName = params[0].toLowerCase(Locale.ROOT)
-
-            when (subName){
+            when (params[0].toLowerCase(Locale.ROOT)){
                 "blacklist" ->
                     if (BlackListCMD.checkPermission(server, sender))
                         BlackListCMD.execute(server, sender, relayparams)

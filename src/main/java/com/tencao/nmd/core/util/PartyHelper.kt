@@ -3,6 +3,7 @@ package com.tencao.nmd.core.util
 import be.bluexin.saomclib.capabilities.getPartyCapability
 import be.bluexin.saomclib.packets.PacketPipeline
 import be.bluexin.saomclib.party.IParty
+import be.bluexin.saomclib.party.IPlayerInfo
 import com.tencao.nmd.api.IRarity
 import com.tencao.nmd.api.ISpecialLootSettings
 import com.tencao.nmd.config.NMDConfig
@@ -35,14 +36,14 @@ object PartyHelper {
         //We're adding an additional 20 ticks to compensate for lag during packet sending
 
         val time: Long = FMLCommonHandler.instance().minecraftServerInstance.getWorld(0).totalWorldTime + (NMDConfig.partycfg.LootRollTimer * 20).toLong() + 20L
-        party.members.forEach {
+        party.membersInfo.mapNotNull(IPlayerInfo::player).forEach {
             PacketPipeline.sendTo(LootClientPKT(entityItem.simpleStack, NMDConfig.partycfg.LootRollTimer * 20, rollID, rarity, lootSettings), it as EntityPlayerMP)
         }
         LootRegistry.lootdrops.add(ServerLootObject(entityItem, party, time, rollID, lootSettings, LootRegistry.getServerLootCache(lootSettings, party)))
     }
 
     fun addExpToParty(player: EntityPlayer, exp: Int){
-        val selectedMembers = player.getPartyCapability().getOrCreatePT().members.filter { player.getDistanceSq(it) <= PlayerHelper.squareSum(128) }
+        val selectedMembers = player.getPartyCapability().getOrCreatePT().membersInfo.mapNotNull(IPlayerInfo::player).filter { player.getDistanceSq(it) <= PlayerHelper.squareSum(128) }
         val givenExp = exp / selectedMembers.count()
         selectedMembers.forEach { it.addExperience(givenExp) }
     }

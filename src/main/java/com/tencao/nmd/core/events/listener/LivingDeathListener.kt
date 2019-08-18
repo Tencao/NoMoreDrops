@@ -14,9 +14,9 @@ import java.util.*
 
 object LivingDeathListener {
 
-    val cache: LinkedListMultimap<UUID, EntityPlayer> = LinkedListMultimap.create<UUID, EntityPlayer>()
+    val cache: LinkedListMultimap<UUID, EntityPlayer> = LinkedListMultimap.create()
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
+    @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
     fun onLivingDeath(event: LivingDeathEvent) {
         val mob = event.entityLiving ?: return
         if (!mob.world.isRemote)

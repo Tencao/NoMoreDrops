@@ -1,6 +1,7 @@
 package com.tencao.nmd.party.data
 
 import be.bluexin.saomclib.party.IParty
+import be.bluexin.saomclib.party.IPlayerInfo
 import com.tencao.nmd.core.data.SimpleStack
 import com.tencao.nmd.party.entities.EntityPartyItem
 import net.minecraft.entity.Entity
@@ -24,7 +25,7 @@ data class SimpleEntityItem(val simpleStack: SimpleStack, val pos: BlockPos, val
      * @param hasRolled = If true, item has already been rolled.
      */
     fun spawnEntityPartyItem(party: IParty, hasRolled: Boolean){
-        world.spawnEntity(EntityPartyItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), toStack(), party.members.asSequence().map { player -> player.uniqueID }.toHashSet(), hasRolled))
+        world.spawnEntity(EntityPartyItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), toStack(), party.membersInfo.mapNotNull(IPlayerInfo::player).asSequence().map { player -> player.uniqueID }.toHashSet(), hasRolled))
     }
 
     fun toStack(): ItemStack {

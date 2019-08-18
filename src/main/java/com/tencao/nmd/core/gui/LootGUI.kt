@@ -49,7 +49,7 @@ object LootGUI : GuiScreen() {
         buttons.subList(2, 6).forEach { it.visible = false }
         buttons.subList(4, 6).forEach { it.enabled = mc.player.getPartyCapability().getOrCreatePT().isLeader(mc.player) }
         var count = 0
-        mc.player.getNMDData().lootSettings.forEach { rarity, lootsetting ->
+        mc.player.getNMDData().lootSettings.forEach { (rarity, lootsetting) ->
             val button = GUILootButton(rarity, lootsetting, 5 + ++count, (sr.scaledWidth / 2) - 75, (sr.scaledHeight / 2) - 70 + (21 * count), 150, 20)
             button.visible = false
             buttons.add(button)
@@ -146,7 +146,7 @@ object LootGUI : GuiScreen() {
                         buttons[2].visible = true
                         if (PartyHelper.isValidParty(mc.player)) {
                             buttons[3].visible = true
-                            if (mc.player.getPartyCapability().getOrCreatePT().leader == mc.player) {
+                            if (mc.player.getPartyCapability().getOrCreatePT().leaderInfo?.player == mc.player) {
                                 buttons[4].visible = true
                                 buttons[5].visible = true
                             } else return@run

@@ -19,9 +19,9 @@ import org.apache.logging.log4j.Logger
 
 @Mod(modid = NMDCore.MODID, name = NMDCore.NAME, version = NMDCore.VERSION, dependencies = NMDCore.DEPS)
 object NMDCore {
-    const val MODID = "nmd-core"
+    const val MODID = "nmd"
     const val NAME = "No More Drops"
-    const val VERSION = "0.3.6"
+    const val VERSION = "0.4.1"
     const val DEPS = "required-after:saomclib@[1.2,)"
     val LOGGER: Logger = LogManager.getLogger(MODID)
 

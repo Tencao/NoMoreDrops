@@ -42,7 +42,7 @@ object LootSettingsCMD : NMDCommandBase() {
         if (params.size == 2) {
             return LootSettingsEnum.values().map { it.name }.filter (LowerCasePrefixPredicate(params[0]))
         }
-        return ImmutableList.of<String>()
+        return ImmutableList.of()
     }
 
     @Throws(CommandException::class)

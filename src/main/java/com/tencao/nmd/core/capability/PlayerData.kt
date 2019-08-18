@@ -5,6 +5,7 @@ import be.bluexin.saomclib.capabilities.AbstractEntityCapability
 import be.bluexin.saomclib.capabilities.Key
 import be.bluexin.saomclib.capabilities.getPartyCapability
 import be.bluexin.saomclib.packets.PacketPipeline
+import be.bluexin.saomclib.party.IPlayerInfo
 import com.tencao.nmd.core.NMDCore
 import com.tencao.nmd.api.ILootSettings
 import com.tencao.nmd.api.IRarity
@@ -55,7 +56,7 @@ class PlayerData : AbstractEntityCapability() {
     override fun setup(param: Any): AbstractCapability {
         super.setup(param)
         this.player = param as EntityPlayer
-        if (NMDConfig.partyModule && !this.player.world.isRemote) {
+        if (NMDConfig.partycfg.partyModule && !this.player.world.isRemote) {
             LootRegistry.defaultLootPairings.toMap(lootSettings)
         }
         return this
@@ -93,7 +94,7 @@ class PlayerData : AbstractEntityCapability() {
      */
     fun setLootSetting(rarity: IRarity, lootSetting: ILootSettings, sync: Boolean){
         if (!player.world.isRemote && player.getPartyCapability().getOrCreatePT().isLeader(player)){
-            player.getPartyCapability().getOrCreatePT().members
+            player.getPartyCapability().getOrCreatePT().membersInfo.mapNotNull(IPlayerInfo::player)
                     .asSequence()
                     .filter { it != player }
                     .forEach {partyMember -> partyMember.getNMDData().setLootSetting(rarity, lootSetting, sync)

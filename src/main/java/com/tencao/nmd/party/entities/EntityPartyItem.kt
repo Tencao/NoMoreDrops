@@ -14,16 +14,19 @@ class EntityPartyItem: EntityItem {
     val hasRolled: Boolean
 
     constructor(world: World, uuid: Set<UUID>, hasRolled: Boolean): super(world){
+        this.setPickupDelay(40)
         this.owners = uuid
         this.hasRolled = hasRolled
     }
 
     constructor(world: World, x: Double, y: Double, z: Double, uuid: Set<UUID>, hasRolled: Boolean): super(world, x, y, z){
+        this.setPickupDelay(40)
         this.owners = uuid
         this.hasRolled = hasRolled
     }
 
     constructor(world: World, x: Double, y: Double, z: Double, stack: ItemStack, uuid: Set<UUID>, hasRolled: Boolean): super(world, x, y, z, stack){
+        this.setPickupDelay(40)
         this.owners = uuid
         this.hasRolled = hasRolled
     }
@@ -44,7 +47,7 @@ class EntityPartyItem: EntityItem {
             if (hook < 0) return
             val clone = itemstack.copy()
 
-            if (pickupDelay <= 0 && owners.contains(entityIn.uniqueID) && (lifespan - this.age <= 200 || this.owner == entityIn.name) && (hook == 1 || i <= 0 || entityIn.inventory.addItemStackToInventory(itemstack) || clone.count > this.item.count)) {
+            if (pickupDelay <= 0 && owners.contains(entityIn.uniqueID) && (hook == 1 || i <= 0 || entityIn.inventory.addItemStackToInventory(itemstack) || clone.count > this.item.count)) {
                 clone.count = clone.count - this.item.count
                 net.minecraftforge.fml.common.FMLCommonHandler.instance().firePlayerItemPickupEvent(entityIn, this, clone)
 

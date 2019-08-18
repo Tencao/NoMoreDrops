@@ -1,10 +1,10 @@
 package com.tencao.nmd.party.registry
 
-import com.tencao.nmd.core.NMDCore
-import com.tencao.nmd.party.DropRarityEnum
 import com.tencao.nmd.api.IRarity
+import com.tencao.nmd.core.NMDCore
 import com.tencao.nmd.core.data.SimpleStack
 import com.tencao.nmd.core.util.LootTableReflect
+import com.tencao.nmd.party.DropRarityEnum
 import net.minecraft.entity.EntityList
 import net.minecraft.entity.EntityLiving
 import net.minecraft.item.Item
@@ -21,6 +21,7 @@ import net.minecraft.world.storage.loot.functions.SetMetadata
 import java.io.File
 import java.util.function.Consumer
 import java.util.function.Predicate
+import kotlin.math.roundToInt
 
 object LootTableMapper {
 
@@ -161,7 +162,7 @@ class LootCacheEntry(val stack: SimpleStack, var rarity: IRarity?): Predicate<It
 
     override fun compareTo(other: LootCacheEntry): Int {
         return if (ItemStack.areItemsEqual(toStack(), other.toStack()))
-            Math.round(other.getDropChance() - getDropChance())
+            (other.getDropChance() - getDropChance()).roundToInt()
         else return -1
     }
 }

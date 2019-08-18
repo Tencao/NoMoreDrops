@@ -23,7 +23,7 @@ class LootSyncAllPKT(): IMessage {
     }
 
     override fun fromBytes(buf: ByteBuf) {
-        for (I in 0..buf.readByte().toInt())
+        for (I in 0 until buf.readByte().toInt())
             lootSettings[LootRegistry.getRegisteredRarity(buf.readString())] = LootRegistry.getRegisteredLoot(buf.readString())
     }
 

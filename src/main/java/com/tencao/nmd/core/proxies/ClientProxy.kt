@@ -14,5 +14,6 @@ class ClientProxy: IProxy {
     override fun registerEvents() {
         MinecraftForge.EVENT_BUS.register(LootGUI)
         MinecraftForge.EVENT_BUS.register(KeyPressListener)
+        super.registerEvents()
     }
 }

@@ -9,6 +9,7 @@ import com.tencao.nmd.party.PartyCore.DEPS
 import com.tencao.nmd.party.PartyCore.MODID
 import com.tencao.nmd.party.PartyCore.NAME
 import com.tencao.nmd.party.events.handler.RegisterLootRarityEvent
+import com.tencao.nmd.party.network.packets.LootSyncAllPKT
 import com.tencao.nmd.party.proxies.IProxy
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.fml.common.Mod
@@ -38,6 +39,7 @@ object PartyCore {
         PacketPipeline.registerMessage(LootClientPKT::class.java, LootClientPKT.Companion.Handler::class.java)
         PacketPipeline.registerMessage(LootServerPKT::class.java, LootServerPKT.Companion.Handler::class.java)
         PacketPipeline.registerMessage(LootSyncPKT::class.java, LootSyncPKT.Companion.Handler::class.java)
+        PacketPipeline.registerMessage(LootSyncAllPKT::class.java, LootSyncAllPKT.Companion.Handler::class.java)
     }
 
     @Mod.EventHandler

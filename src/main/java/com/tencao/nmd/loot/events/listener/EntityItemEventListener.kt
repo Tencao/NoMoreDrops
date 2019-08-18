@@ -1,9 +1,9 @@
 package com.tencao.nmd.loot.events.listener
 
 import be.bluexin.saomclib.capabilities.getPartyCapability
+import com.tencao.nmd.config.NMDConfig
 import com.tencao.nmd.party.LootSettingsEnum
 import com.tencao.nmd.core.capability.getNMDData
-import com.tencao.nmd.config.NMDConfig
 import com.tencao.nmd.core.util.PartyHelper
 import com.tencao.nmd.core.util.PlayerHelper
 import com.tencao.nmd.loot.events.handler.LootDropEvent
@@ -27,7 +27,7 @@ object EntityItemEventListener {
                         if (!isDeadZone(player.getDistanceSq(entityItem))){
                             val party = player.getPartyCapability().getOrCreatePT()
                             if (PartyHelper.isValidParty(party)){
-                                val leaderNMDData = party.leader!!.getNMDData()
+                                val leaderNMDData = party.leaderInfo?.player!!.getNMDData()
                                 val rarity = LootTableMapper.getRarity(entityItem.item)
                                 val lootSetting = leaderNMDData.getLootSetting(rarity)
                                 if (lootSetting != LootSettingsEnum.None) {

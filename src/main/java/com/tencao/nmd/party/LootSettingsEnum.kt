@@ -1,11 +1,12 @@
 package com.tencao.nmd.party
 
 import be.bluexin.saomclib.party.IParty
+import be.bluexin.saomclib.party.IPlayerInfo
 import com.tencao.nmd.api.ILootSettings
 import com.tencao.nmd.api.ISpecialLootSettings
+import com.tencao.nmd.config.NMDConfig
 import com.tencao.nmd.core.NMDCore
 import com.tencao.nmd.core.capability.getNMDData
-import com.tencao.nmd.config.NMDConfig
 import com.tencao.nmd.core.gui.LootGUI
 import com.tencao.nmd.core.util.FakeWorld
 import com.tencao.nmd.core.util.PlayerHelper
@@ -90,7 +91,7 @@ enum class LootSettingsEnum: ILootSettings {
     };
 
     fun getNearbyParty(entityItem: SimpleEntityItem, party: IParty): MutableList<EntityPlayer>{
-        return party.members.filter { pl -> !pl.getNMDData().isBlackListed(entityItem.toStack()) && entityItem.getDistanceSq(pl) <= PlayerHelper.squareSum(64) }.toMutableList()
+        return party.membersInfo.mapNotNull(IPlayerInfo::player).filter { pl -> !pl.getNMDData().isBlackListed(entityItem.toStack()) && entityItem.getDistanceSq(pl) <= PlayerHelper.squareSum(64) }.toMutableList()
     }
 }
 
@@ -247,11 +248,13 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
                     .filter ( RollData::isRollValid )
                     .sortedWith( compareByDescending { it.roll } )
                     .firstOrNull { rollData -> PlayerHelper.addDropsToPlayer(rollData.uuid, entityItem.toStack(), false) }
-            if (winner == null)
+            if (winner == null) {
                 serverCache.forEach {
                     FMLCommonHandler.instance().minecraftServerInstance.playerList.players.firstOrNull { player -> player.uniqueID == it.uuid }?.let { player ->
                         player.sendMessage(TextComponentTranslation("nmd.loot.needorgreed.noroll", entityItem.toStack().displayName))
                     }
+                }
+                entityItem.spawnEntityPartyItem(party, true)
             }
             else {
                 serverCache.asSequence().filter ( RollData::isRollValid ).forEach {
@@ -278,7 +281,7 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
 
         override fun createServerCache(party: IParty): Any? {
             val rollData = HashSet<RollData>()
-            party.members.forEach {
+            party.membersInfo.mapNotNull(IPlayerInfo::player).forEach {
                 rollData.add(RollData(it.uniqueID))
             }
             return rollData

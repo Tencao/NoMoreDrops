@@ -1,6 +1,7 @@
 package com.tencao.nmd.party.events.listener
 
-import be.bluexin.saomclib.events.PartyEvent
+import be.bluexin.saomclib.events.PartyEventV2
+import be.bluexin.saomclib.party.IPlayerInfo
 import com.tencao.nmd.api.ISpecialLootSettings
 import com.tencao.nmd.core.capability.getNMDData
 import com.tencao.nmd.core.util.PartyHelper
@@ -19,7 +20,7 @@ object PartyEventListener {
         if (event.isDrop)
             event.entityItem.spawnEntityPartyItem(event.party, !event.isDrop)
         else {
-            val leaderNMDData = event.party.leader!!.getNMDData()
+            val leaderNMDData = event.party.leaderInfo?.player!!.getNMDData()
             val lootSetting = leaderNMDData.getLootSetting(event.dropRarity)
             MinecraftForge.EVENT_BUS.post(PartyLootEvent(event.entityItem, event.party, lootSetting, event.dropRarity, UUID.randomUUID()))
         }
@@ -28,18 +29,18 @@ object PartyEventListener {
 
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    fun onPartyJoin(event: PartyEvent.Join){
-        event.player.getNMDData().setLootSetting(event.party!!.leader!!.getNMDData().lootSettings)
+    fun onPartyJoin(event: PartyEventV2.Join){
+        event.player.player?.getNMDData()?.setLootSetting(event.party!!.leaderInfo?.player!!.getNMDData().lootSettings)
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    fun onPartyLeave(event: PartyEvent.Leave){
-        event.player.getNMDData().resetLootSettings()
+    fun onPartyLeave(event: PartyEventV2.Leave){
+        event.player.player?.getNMDData()?.resetLootSettings()
     }
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
-    fun onPartyDisband(event: PartyEvent.Disbanded){
-        event.party?.members?.forEach { it.getNMDData().resetLootSettings() }
+    fun onPartyDisband(event: PartyEventV2.Disbanded){
+        event.party?.membersInfo?.mapNotNull(IPlayerInfo::player)?.forEach { it.getNMDData().resetLootSettings() }
         LootRegistry.removeServerLootCache(event.party!!)
     }
 
