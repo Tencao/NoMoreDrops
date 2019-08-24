@@ -1,6 +1,6 @@
 package com.tencao.nmd.config;
 
-import com.tencao.nmd.core.NMDCore;
+import com.tencao.nmd.NMDCore;
 import net.minecraftforge.common.config.Config;
 
 @Config(modid = NMDCore.MODID, name = NMDCore.NAME + "/config")
@@ -18,7 +18,10 @@ public final class NMDConfig {
 
         @Config.RangeInt(min = 0, max = 100)
         @Config.Comment("Minimum distance needed to automatically pickup the loot")
-        public int distanceForDrop=  4;
+        public int distanceForDrop =  4;
+
+        @Config.Comment("If all loot dropped by mobs should drop on the ground instead of auto looted.")
+        public boolean alwaysDropMobLoot = false;
     }
 
     public static class PartyConfig {
@@ -32,5 +35,6 @@ public final class NMDConfig {
         @Config.RangeInt(min = 0, max = 100)
         @Config.Comment("Minimum drop chance for items to be considered for need or greed")
         public int minimumDropChance = 20;
+
     }
 }
