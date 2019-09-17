@@ -1,16 +1,22 @@
 package com.tencao.nmd.api
 
 import be.bluexin.saomclib.party.IParty
+import com.tencao.nmd.NMDCore
 import com.tencao.nmd.data.SimpleEntityItem
 import com.tencao.nmd.gui.LootGUI
 import com.tencao.nmd.data.ClientLootObject
 import io.netty.buffer.ByteBuf
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.FontRenderer
 import net.minecraft.client.gui.ScaledResolution
 import net.minecraft.client.renderer.GlStateManager
 import net.minecraft.client.renderer.RenderHelper
+import net.minecraft.client.util.ITooltipFlag
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
+import net.minecraft.util.text.TextFormatting
+import net.minecraftforge.fml.client.config.GuiUtils
+import java.util.*
 
 /**
  * This is the main interface needed for creating custom loot settings.
@@ -31,12 +37,12 @@ interface ILootSettings {
      * @param serverCache The cache object, only present on ISpecialLoot
      * @return Returns the updated cache back, null if no changes
      */
-    fun handleLoot(entityItem: SimpleEntityItem, party: IParty, serverCache: Any?): Any?
+    fun handleLoot(entityItem: SimpleEntityItem, party: Set<UUID>, serverCache: Any?): Any?
 
     /**
      * Creates a new server cache instance for the loot drop.
      */
-    fun createServerCache(party: IParty): Any?{
+    fun createServerCache(party: Set<UUID>): Any?{
         return null
     }
 
@@ -116,7 +122,7 @@ interface ISpecialLootSettings: ILootSettings {
      * stack, and remaining tick time
      * @return Return true if mouse is over, or false if not
      */
-    fun isMouseOver(mc: Minecraft, cursorX: Int, cursorY: Int, clientData: ClientLootObject): Boolean
+    fun isMouseOver(mc: Minecraft, sr: ScaledResolution, cursorX: Int, cursorY: Int, clientData: ClientLootObject): Boolean
 
     /**
      * When a mouse clicks on the GUILootScreen
@@ -178,7 +184,11 @@ interface ISpecialLootSettings: ILootSettings {
      */
     fun areConditionsMet(serverCache: Any?): Boolean
 
-
+    /**
+     * If this should send to client, useful if player
+     * has already rolled or only one client needs the data.
+     */
+    fun shouldSendToClient(player: EntityPlayer, serverCache: Any?): Boolean
 
     /**
      * Copied from GuiContainer.class
@@ -186,16 +196,32 @@ interface ISpecialLootSettings: ILootSettings {
      *
      * The z index is increased by 32 (and not decreased afterwards), and the item is then rendered at z=200.
      */
-    fun drawItemStack(stack: ItemStack, x: Int, y: Int) {
+    fun drawItemStack(stack: ItemStack, x: Int, y: Int, cursorX: Int, cursorY: Int) {
         if (stack.isEmpty) return
         val itemRenderer = LootGUI.mc.renderItem
         RenderHelper.enableGUIStandardItemLighting()
         GlStateManager.translate(0.0f, 0.0f, 32.0f)
-        val font: net.minecraft.client.gui.FontRenderer = stack.item.getFontRenderer(stack)?: LootGUI.mc.fontRenderer
+        val font: FontRenderer = stack.item.getFontRenderer(stack)?: LootGUI.mc.fontRenderer
         itemRenderer.zLevel = 200.0f
         itemRenderer.renderItemAndEffectIntoGUI(stack, x, y)
         itemRenderer.renderItemOverlayIntoGUI(font, stack, x, y - 0, "")
         itemRenderer.zLevel = 0.0f
         RenderHelper.disableStandardItemLighting()
+    }
+
+    fun renderItemToolTip(stack: ItemStack, cursorX: Int, cursorY: Int, width: Int, height: Int){
+        val font: FontRenderer = stack.item.getFontRenderer(stack)?: LootGUI.mc.fontRenderer
+        GuiUtils.preItemToolTip(stack)
+        val list = stack.getTooltip(Minecraft.getMinecraft().player, if (Minecraft.getMinecraft().gameSettings.advancedItemTooltips) ITooltipFlag.TooltipFlags.ADVANCED else ITooltipFlag.TooltipFlags.NORMAL)
+
+        for (i in list.indices) {
+            if (i == 0) {
+                list[i] = stack.rarity.color.toString() + list[i]
+            } else {
+                list[i] = TextFormatting.GRAY.toString() + list[i]
+            }
+        }
+        GuiUtils.drawHoveringText(stack, list, cursorX, cursorY, width, height, -1, font)
+        GuiUtils.postItemToolTip()
     }
 }

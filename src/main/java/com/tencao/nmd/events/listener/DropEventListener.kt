@@ -3,13 +3,14 @@ package com.tencao.nmd.events.listener
 import be.bluexin.saomclib.capabilities.PartyCapability
 import be.bluexin.saomclib.capabilities.getPartyCapability
 import be.bluexin.saomclib.events.PartyEventV2
+import be.bluexin.saomclib.onServer
 import be.bluexin.saomclib.packets.PacketPipeline
 import be.bluexin.saomclib.party.IPlayerInfo
-import be.bluexin.saomclib.party.PlayerInfo
 import com.tencao.nmd.api.ISpecialLootSettings
 import com.tencao.nmd.config.NMDConfig
 import com.tencao.nmd.DropRarityEnum
 import com.tencao.nmd.LootSettingsEnum
+import com.tencao.nmd.NMDCore
 import com.tencao.nmd.SpecialLootSettingsEnum
 import com.tencao.nmd.capability.getNMDData
 import com.tencao.nmd.events.listener.LivingDeathListener.cache
@@ -18,6 +19,7 @@ import com.tencao.nmd.data.SimpleEntityItem
 import com.tencao.nmd.events.handler.LootDropEvent
 import com.tencao.nmd.events.handler.PartyLootEvent
 import com.tencao.nmd.events.handler.RegisterLootRarityEvent
+import com.tencao.nmd.network.packets.LootClientPKT
 import com.tencao.nmd.network.packets.LootSyncAllPKT
 import com.tencao.nmd.registry.LootRegistry
 import com.tencao.nmd.registry.LootTableMapper
@@ -31,28 +33,27 @@ import net.minecraftforge.fml.common.eventhandler.EventPriority
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import net.minecraftforge.fml.common.gameevent.PlayerEvent
 import net.minecraftforge.fml.common.gameevent.TickEvent
-import java.util.*
 
 object DropEventListener {
-
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     fun onLivingDrop(event: LivingDropsEvent) {
         val mob = event.entityLiving?: return
-        if (!mob.world.isRemote && cache.containsKey(mob.uniqueID)){
+        if (!mob.world.isRemote && cache.containsKey(mob.uniqueID)) {
             val player = cache[mob.uniqueID].first()
             val party = player.getPartyCapability().party
+            NMDCore.LOGGER.info(party?.membersInfo.toString())
             if (PartyHelper.isValidParty(party)) {
-                if (NMDConfig.lootcfg.alwaysDropMobLoot){
-                    event.drops.removeIf {entityItem ->
+                if (NMDConfig.lootcfg.alwaysDropMobLoot) {
+                    event.drops.removeIf { entityItem ->
                         val entity = SimpleEntityItem(entityItem)
                         val rarity = LootTableMapper.getRarity(entityItem.item)
-                        MinecraftForge.EVENT_BUS.post(LootDropEvent(entity, party?.leaderInfo?.player?: player, rarity, LootSettingsEnum.None, true))
+                        MinecraftForge.EVENT_BUS.post(LootDropEvent(entity, party?.leaderInfo?.player
+                                ?: player, rarity, LootSettingsEnum.None, true))
                         true
                     }
-                }
-                else {
-                    val leaderNMDData = party?.leaderInfo?.player?.getNMDData()?: player.getNMDData()
+                } else {
+                    val leaderNMDData = party?.leaderInfo?.player?.getNMDData() ?: player.getNMDData()
                     event.drops.removeIf { entityItem ->
                         val entity = SimpleEntityItem(entityItem)
                         val rarity = LootTableMapper.getRarity(entityItem.item)
@@ -108,6 +109,9 @@ object LootRegisterListener {
         event.registerLootRarity(DropRarityEnum.UNCOMMON, SpecialLootSettingsEnum.NeedOrGreed)
         event.registerLootRarity(DropRarityEnum.RARE, SpecialLootSettingsEnum.NeedOrGreed)
         event.registerLootRarity(DropRarityEnum.EPIC, SpecialLootSettingsEnum.NeedOrGreed)
+        event.registerLootRarity(DropRarityEnum.LEGENDARY, SpecialLootSettingsEnum.NeedOrGreed)
+        event.registerLootRarity(DropRarityEnum.MYTHIC, SpecialLootSettingsEnum.NeedOrGreed)
+        event.registerLootRarity(DropRarityEnum.GODLIKE, SpecialLootSettingsEnum.NeedOrGreed)
         event.registerLootSettings(LootSettingsEnum.Random)
         event.registerLootSettings(LootSettingsEnum.RoundRobin)
 
@@ -158,11 +162,12 @@ object PartyEventListener {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     fun onPartyLoot(event: PartyLootEvent){
+        val players = event.party.membersInfo.filter { it.player != null }.map { it.uuid }.toSet()
         if (event.lootSetting is ISpecialLootSettings)
             PartyHelper.sendLootPacket(event.entityItem, event.party, event.dropRarity, event.lootSetting as ISpecialLootSettings, event.rollID)
         else {
-            event.lootSetting.handleLoot(event.entityItem, event.party, LootRegistry.getServerLootCache(event.lootSetting, event.party))?.let { cache ->
-                LootRegistry.updateServerCache(event.lootSetting, event.party, cache)
+            event.lootSetting.handleLoot(event.entityItem, players, LootRegistry.getServerLootCache(event.lootSetting, players))?.let { cache ->
+                LootRegistry.updateServerCache(event.lootSetting, players, cache)
             }
         }
         event.isCanceled = true
@@ -181,8 +186,17 @@ object PlayerEventListener {
         }
     }
 
-    fun onPlayerConnect(event: PlayerEvent.PlayerLoggedInEvent){
-        PacketPipeline.sendTo(LootSyncAllPKT(event.player.getNMDData().lootSettings), event.player as EntityPlayerMP)
+    @SubscribeEvent
+    fun onPlayerConnect(e: PlayerEvent.PlayerLoggedInEvent){
+        PacketPipeline.sendTo(LootSyncAllPKT(e.player.getNMDData().lootSettings), e.player as EntityPlayerMP)
+
+        e.player.world.onServer {
+            LootRegistry.lootdrops.forEach {
+                if (it.party.contains(e.player.uniqueID) && it.shouldSendPlayer(e.player)) {
+                    PacketPipeline.sendTo(LootClientPKT(it.entityItem.simpleStack, (it.tickTime - e.player.world.totalWorldTime).toInt() - 20, it.rollID, it.rarity, it.lootSetting), e.player as EntityPlayerMP)
+                }
+            }
+        }
     }
 }
 
@@ -193,7 +207,7 @@ object WorldEventListener {
         if (event.phase == TickEvent.Phase.END)
             if (!event.world.isRemote) {
                 if (event.world.provider.dimension == 0) {
-                    LootRegistry.lootdrops.asSequence().filter { ++it.tickTime <= event.world.totalWorldTime }.forEach { it.handleLoot() }
+                    LootRegistry.lootdrops.asSequence().filter { it.tickTime <= event.world.totalWorldTime }.forEach { it.handleLoot() }
                 }
             }
     }

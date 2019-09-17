@@ -2,6 +2,7 @@ package com.tencao.nmd.gui
 
 import be.bluexin.saomclib.capabilities.getPartyCapability
 import be.bluexin.saomclib.packets.PacketPipeline
+import com.tencao.nmd.NMDCore
 import com.tencao.nmd.api.ISpecialLootSettings
 import com.tencao.nmd.capability.getNMDData
 import com.tencao.nmd.gui.buttons.GUILootButton
@@ -16,7 +17,9 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiButton
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.client.gui.ScaledResolution
+import net.minecraft.client.gui.toasts.GuiToast
 import net.minecraft.client.resources.I18n
+import net.minecraftforge.client.event.MouseEvent
 import net.minecraftforge.client.event.RenderGameOverlayEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.lwjgl.input.Mouse
@@ -28,6 +31,9 @@ object LootGUI : GuiScreen() {
 
     private var lastFocus: ClientLootObject? = null
     private lateinit var buttons: ArrayList<GuiButton>
+    var lastMouseX: Int = 0
+    var lastMouseY: Int = 0
+    var hasClicked: Boolean = false
 
     init {
         mc = Minecraft.getMinecraft()
@@ -60,14 +66,13 @@ object LootGUI : GuiScreen() {
     }
 
     override fun drawScreen(cursorX: Int, cursorY: Int, partialTicks: Float) {
-        draw(cursorX, cursorY, partialTicks, true)
+        draw(ScaledResolution(mc), cursorX, cursorY, partialTicks, true)
     }
 
 
-    fun draw (cursorX: Int, cursorY: Int, partialTicks: Float, isFullRender: Boolean){
+    fun draw (sr: ScaledResolution, cursorX: Int, cursorY: Int, partialTicks: Float, isFullRender: Boolean){
         // More accurate count of rendered objects vs index
         var count = 0
-        val sr = ScaledResolution(mc)
         // Used to display a loot notification if loot filter has chosen not to render over gameplay
         var renderLootIcon = false
         mc.player.getNMDData().lootDrops.asSequence().forEachIndexed { _, entry ->
@@ -174,12 +179,12 @@ object LootGUI : GuiScreen() {
                 }
             }
         }
-        lootClick(mc, cursorX, cursorY, state)
+        lootClick(mc, ScaledResolution(mc), cursorX, cursorY, state)
     }
 
-    fun lootClick(mc: Minecraft, cursorX: Int, cursorY: Int, state: Int){
+    fun lootClick(mc: Minecraft, sr: ScaledResolution, cursorX: Int, cursorY: Int, state: Int){
         mc.player.getNMDData().lootDrops
-                .firstOrNull { it.lootSetting.isMouseOver(LootGUI.mc, cursorX, cursorY, it) }
+                .firstOrNull { it.lootSetting.isMouseOver(LootGUI.mc, sr, cursorX, cursorY, it) }
                 ?.run {
                     if (this.lootSetting.onClick(LootGUI.mc, cursorX, cursorY, state, this)) {
                         mc.player.getNMDData().lootDrops.remove(this)
@@ -218,28 +223,36 @@ object LootGUI : GuiScreen() {
 
     @SubscribeEvent
     fun renderOverlay(event: RenderGameOverlayEvent){
+        val sr = ScaledResolution(mc)
         if (event.type == RenderGameOverlayEvent.ElementType.TEXT && mc.currentScreen != this) {
-            draw(0, 0, 0f, false)
+            if (mc.currentScreen != null) {
+                val cursorX = Mouse.getEventX() / 2
+                val cursorY = (mc.displayHeight - Mouse.getY()) / 2
+                lastMouseX = cursorX
+                lastMouseY = cursorY
+                //cursorY = mc.currentScreen!!.height - Mouse.getY() * mc.currentScreen!!.height / sr.scaledHeight - 1
+            }
+
+            draw(sr, lastMouseX, lastMouseY, 0f, false)
         }
 
         if (mc.player?.getNMDData()?.lootDrops?.isNotEmpty() == true) {
             val screen = mc.currentScreen ?: return
             if (!mc.inGameHasFocus && screen !is LootGUI) {
-                val cursorX = Mouse.getEventX() * screen.width / mc.displayWidth
-                val cursorY = screen.height - Mouse.getEventY() * screen.height / mc.displayHeight - 1
                 val state = Mouse.getEventButton()
+                if (state == 0) {
+                    if (!hasClicked) {
+                        var touchValue = GUIScreenReflect.getTouchValue(screen)
+                        if (mc.gameSettings.touchscreen && --touchValue > 0) {
+                            return
+                        }
+                        hasClicked = true
 
-                if (state != -1) {
-                    var touchValue = GUIScreenReflect.getTouchValue(screen)
-                    if (mc.gameSettings.touchscreen && --touchValue > 0) {
-                        return
+                        lootClick(mc, sr, lastMouseX, lastMouseY, state)
                     }
-
-                    lootClick(mc, cursorX, cursorY, state)
-                } /*else if (state != -1 && screen.lastMouseEvent > 0L) {
-                    val l = Minecraft.getSystemTime() - screen.lastMouseEvent
-                    mouseClickMove(mc, cursorX, cursorY, screen, l)
-                }*/
+                } else {
+                    hasClicked = false
+                }
 
             }
         }

@@ -9,6 +9,7 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
 import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
+import java.util.*
 
 data class SimpleEntityItem(val simpleStack: SimpleStack, val pos: BlockPos, val world: World) {
 
@@ -25,7 +26,15 @@ data class SimpleEntityItem(val simpleStack: SimpleStack, val pos: BlockPos, val
      * @param hasRolled = If true, item has already been rolled.
      */
     fun spawnEntityPartyItem(party: IParty, hasRolled: Boolean){
-        world.spawnEntity(EntityPartyItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), toStack(), party.membersInfo.mapNotNull(IPlayerInfo::player).asSequence().map { player -> player.uniqueID }.toHashSet(), hasRolled))
+        world.spawnEntity(EntityPartyItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), toStack(), party.membersInfo.filter { it.player != null }.map { it.uuid }.toSet(), hasRolled))
+    }
+
+    /**
+     * Used to drop the loot item while still assigning the loot to players
+     * @param hasRolled = If true, item has already been rolled.
+     */
+    fun spawnEntityPartyItem(party: Set<UUID>, hasRolled: Boolean){
+        world.spawnEntity(EntityPartyItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), toStack(), party, hasRolled))
     }
 
     /**

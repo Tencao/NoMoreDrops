@@ -21,13 +21,15 @@ import net.minecraft.util.ResourceLocation
 import net.minecraft.util.text.TextComponentTranslation
 import net.minecraftforge.fml.common.FMLCommonHandler
 import java.awt.Color
+import java.util.*
+import kotlin.collections.HashSet
 
 enum class LootSettingsEnum: ILootSettings {
     None {
         override val displayName: String
             get() = "NONE"
 
-        override fun handleLoot(entityItem: SimpleEntityItem, party: IParty, serverCache: Any?): Any? {
+        override fun handleLoot(entityItem: SimpleEntityItem, party: Set<UUID>, serverCache: Any?): Any? {
             entityItem.spawnEntityPartyItem(party, true)
             return null
         }
@@ -36,7 +38,7 @@ enum class LootSettingsEnum: ILootSettings {
 
         override val displayName: String = "Random"
 
-        override fun handleLoot(entityItem: SimpleEntityItem, party: IParty, serverCache: Any?) {
+        override fun handleLoot(entityItem: SimpleEntityItem, party: Set<UUID>, serverCache: Any?) {
             val partyMembers = getNearbyParty(entityItem, party)
             if (partyMembers.isNotEmpty()) {
                 val stack = entityItem.toStack()
@@ -57,7 +59,7 @@ enum class LootSettingsEnum: ILootSettings {
 
         override val displayName: String = "Round Robin"
 
-        override fun handleLoot(entityItem: SimpleEntityItem, party: IParty, serverCache: Any?): Any? {
+        override fun handleLoot(entityItem: SimpleEntityItem, party: Set<UUID>, serverCache: Any?): Any? {
             val partyMembers = getNearbyParty(entityItem, party)
             var lastMember = serverCache as Int
 
@@ -79,7 +81,7 @@ enum class LootSettingsEnum: ILootSettings {
             return lastMember
         }
 
-        override fun createServerCache(party: IParty): Int {
+        override fun createServerCache(party: Set<UUID>): Int {
             return 0
         }
 
@@ -88,8 +90,10 @@ enum class LootSettingsEnum: ILootSettings {
         }
     };
 
-    fun getNearbyParty(entityItem: SimpleEntityItem, party: IParty): MutableList<EntityPlayer>{
-        return party.membersInfo.mapNotNull(IPlayerInfo::player).filter { pl -> !pl.getNMDData().isBlackListed(entityItem.toStack()) && entityItem.getDistanceSq(pl) <= PlayerHelper.squareSum(64) }.toMutableList()
+    fun getNearbyParty(entityItem: SimpleEntityItem, party: Set<UUID>): MutableList<EntityPlayer>{
+        return party.map { FMLCommonHandler.instance().minecraftServerInstance.playerList.getPlayerByUUID(it) }.filter {player ->
+            player.getNMDData().isBlackListed(entityItem.toStack()) && entityItem.getDistanceSq(player) <= PlayerHelper.squareSum(64)
+        }.toMutableList()
     }
 }
 
@@ -124,6 +128,10 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
 
+        override fun isMouseOver(mc: Minecraft, sr: ScaledResolution, cursorX: Int, cursorY: Int, clientData: ClientLootObject): Boolean {
+            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
         override fun fromBytes(buf: ByteBuf) {
         }
 
@@ -131,13 +139,10 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
 
-        override fun handleLoot(entityItem: SimpleEntityItem, party: IParty, serverCache: Any?) {
+        override fun handleLoot(entityItem: SimpleEntityItem, party: Set<UUID>, serverCache: Any?) {
 
         }
 
-        override fun isMouseOver(mc: Minecraft, cursorX: Int, cursorY: Int, clientData: ClientLootObject): Boolean {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-        }
 
         override fun processClientCache(player: EntityPlayer, clientCache: Any?, serverCache: Any?) {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
@@ -147,8 +152,14 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
 
+        override fun shouldSendToClient(player: EntityPlayer, serverCache: Any?): Boolean {
+            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        }
+
     },
     NeedOrGreed {
+
+        private val RES_ITEM_GLINT = ResourceLocation("textures/misc/enchanted_item_glint.png")
 
         override val displayName: String = "Need or Greed"
 
@@ -183,28 +194,65 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
             val progress = (barWidth * (clientData.tickTime /(NMDConfig.partycfg.LootRollTimer * 20f))).toInt()
             gui.mc.renderEngine.bindTexture(ResourceLocation(NMDCore.MODID, "textures/gui/lootgui.png"))
             //Background
+            val x = sr.scaledWidth - clientData.x
+            val y = sr.scaledHeight - clientData.y
             val color = Color(clientData.rarity.rgb)
+
+            GlStateManager.disableLighting()
             GlStateManager.color(color.red.toFloat() / 255, color.green.toFloat() / 255, color.blue.toFloat() / 255)
-            gui.drawTexturedModalRect(sr.scaledWidth - clientData.x, sr.scaledHeight - clientData.y, 0, 0, width, height)
+            gui.drawTexturedModalRect(x, y, 0, 0, width, height)
             GlStateManager.color(1f, 1f, 1f)
+
+            if (clientData.rarity.hasEffect) {
+                gui.mc.renderEngine.bindTexture(RES_ITEM_GLINT)
+                GlStateManager.depthMask(false)
+                GlStateManager.depthFunc(514)
+                GlStateManager.enableBlend()
+                GlStateManager.blendFunc(GlStateManager.SourceFactor.SRC_COLOR, GlStateManager.DestFactor.ONE)
+                GlStateManager.matrixMode(5890)
+                GlStateManager.pushMatrix()
+                GlStateManager.scale(8.0f, 8.0f, 8.0f)
+                val f = (Minecraft.getSystemTime() % 3000L).toFloat() / 3000.0f / 8.0f
+                GlStateManager.translate(f, 0.0f, 0.0f)
+                GlStateManager.rotate(-50.0f, 0.0f, 0.0f, 1.0f)
+                gui.drawTexturedModalRect(x, y, 0, 0, width, height)
+                GlStateManager.popMatrix()
+                GlStateManager.pushMatrix()
+                GlStateManager.scale(8.0f, 8.0f, 8.0f)
+                val f1 = (Minecraft.getSystemTime() % 4873L).toFloat() / 4873.0f / 8.0f
+                GlStateManager.translate(-f1, 0.0f, 0.0f)
+                GlStateManager.rotate(10.0f, 0.0f, 0.0f, 1.0f)
+                gui.drawTexturedModalRect(x, y, 0, 0, width, height)
+                GlStateManager.popMatrix()
+                GlStateManager.matrixMode(5888)
+                GlStateManager.disableBlend()
+                GlStateManager.depthFunc(515)
+                GlStateManager.depthMask(true)
+                gui.mc.renderEngine.bindTexture(ResourceLocation(NMDCore.MODID, "textures/gui/lootgui.png"))
+            }
             //Progress Bar
-            gui.drawTexturedModalRect(sr.scaledWidth - clientData.x + (width - barWidth), sr.scaledHeight - clientData.y + 4, 0, 35, progress, barHeight)
+            gui.drawTexturedModalRect(x + (width - barWidth), y + 4, 0, 35, progress, barHeight)
             //Need Icon
-            gui.drawTexturedModalRect(sr.scaledWidth - clientData.x + 100, sr.scaledHeight - clientData.y + 15, width, 0, 18, 18)
+            gui.drawTexturedModalRect(x + needButton, y + 15, width, 0, 18, 18)
             //Greed Icon
-            gui.drawTexturedModalRect(sr.scaledWidth - clientData.x + 116, sr.scaledHeight - clientData.y + 15, width, 18, 18, 18)
+            gui.drawTexturedModalRect(x + greedButton, y + 15, width, 18, 18, 18)
             //Pass Icon
-            gui.drawTexturedModalRect(sr.scaledWidth - clientData.x + 132, sr.scaledHeight - clientData.y + 15, width + 18, 0, 18, 18)
+            gui.drawTexturedModalRect(x + passButton, y + 15, width + 18, 0, 18, 18)
             //Time remaining
-            gui.mc.fontRenderer.drawString("${clientData.tickTime / 20}s", sr.scaledWidth - clientData.x + 50f, sr.scaledHeight - clientData.y + 16f, 0xFFFFFF, true)
+            gui.mc.fontRenderer.drawString("${clientData.tickTime / 20}s", x + 50f, y + 16f, 0xFFFFFF, true)
             //Item render
-            drawItemStack(clientData.simpleStack.stack, sr.scaledWidth - clientData.x + 4, sr.scaledHeight - clientData.y + 4)
-            gui.mc.fontRenderer.drawString(clientData.simpleStack.stack.displayName, sr.scaledWidth - clientData.x + 24f, sr.scaledHeight - clientData.y + 5f, 0xFFFFFF, true)
-            gui.mc.fontRenderer.drawString( "x${clientData.simpleStack.count}", sr.scaledWidth - clientData.x + 24f, sr.scaledHeight - clientData.y + 16f, 0xFFFFFF, true)
+            drawItemStack(clientData.simpleStack.stack, x + 4, y + 4, cursorX, cursorY)
+            val name = clientData.simpleStack.stack.displayName
+            gui.mc.fontRenderer.drawString(if (name.length > 24) name.substring(0, 24) else name , x + 24f, y + 5f, 0xFFFFFF, true)
+            gui.mc.fontRenderer.drawString( "x${clientData.simpleStack.count}", x + 24f, y + 16f, 0xFFFFFF, true)
+            if (IntRange(y + 4, y + 20).contains(cursorY) && IntRange(x + 4, x + 20).contains(cursorX))
+                renderItemToolTip(clientData.simpleStack.stack, cursorX, cursorY, sr.scaledWidth - width, sr.scaledHeight)
+
+            // Ensure lighting is reset upon completion
+            GlStateManager.disableLighting()
         }
 
-        override fun isMouseOver(mc: Minecraft, cursorX: Int, cursorY: Int, clientData: ClientLootObject): Boolean {
-            val sr = ScaledResolution(mc)
+        override fun isMouseOver(mc: Minecraft, sr: ScaledResolution, cursorX: Int, cursorY: Int, clientData: ClientLootObject): Boolean {
             val y = sr.scaledHeight - clientData.y
             val x = sr.scaledWidth - clientData.x
             return cursorX >= x && cursorX <= x + width && cursorY >= y && cursorY <= y + height
@@ -240,7 +288,7 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
         }
 
         @Suppress("UNCHECKED_CAST")
-        override fun handleLoot(entityItem: SimpleEntityItem, party: IParty, serverCache: Any?) {
+        override fun handleLoot(entityItem: SimpleEntityItem, party: Set<UUID>, serverCache: Any?) {
             val winner = (serverCache as HashSet<RollData>)
                     .asSequence()
                     .filter ( RollData::isRollValid )
@@ -271,10 +319,10 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
             return 0
         }
 
-        override fun createServerCache(party: IParty): Any? {
+        override fun createServerCache(party: Set<UUID>): Any? {
             val rollData = HashSet<RollData>()
-            party.membersInfo.mapNotNull(IPlayerInfo::player).forEach {
-                rollData.add(RollData(it.uniqueID))
+            party.forEach {
+                rollData.add(RollData(it))
             }
             return rollData
         }
@@ -287,6 +335,11 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
         @Suppress("UNCHECKED_CAST")
         override fun areConditionsMet(serverCache: Any?): Boolean {
             return (serverCache as HashSet<RollData>).none { it.roll == 0 }
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun shouldSendToClient(player: EntityPlayer, serverCache: Any?): Boolean {
+            return (serverCache as HashSet<RollData>).firstOrNull { it.test(player) }?.hasRolled() == false
         }
 
     };

@@ -15,7 +15,6 @@ interface IProxy {
         MinecraftForge.EVENT_BUS.register(LootRegisterListener)
         MinecraftForge.EVENT_BUS.register(PlayerEventListener)
         MinecraftForge.EVENT_BUS.register(PartyEventListener)
-        MinecraftForge.EVENT_BUS.register(PlayerEventListener)
         MinecraftForge.EVENT_BUS.register(WorldEventListener)
     }
 }

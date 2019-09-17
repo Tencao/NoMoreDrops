@@ -1,6 +1,7 @@
 package com.tencao.nmd.data
 
 import be.bluexin.saomclib.party.IParty
+import com.tencao.nmd.api.IRarity
 import com.tencao.nmd.api.ISpecialLootSettings
 import com.tencao.nmd.registry.LootRegistry
 import net.minecraft.entity.player.EntityPlayer
@@ -14,10 +15,14 @@ import java.util.*
  * @param lootSetting The Loot Settings used
  * @param serverCache The cache associated with the drop
  */
-data class ServerLootObject(val entityItem: SimpleEntityItem, val party: IParty, var tickTime: Long, val rollID: UUID, val lootSetting: ISpecialLootSettings, val serverCache: Any?){
+data class ServerLootObject(val entityItem: SimpleEntityItem, val party: Set<UUID>, val tickTime: Long, val rollID: UUID, val rarity: IRarity, val lootSetting: ISpecialLootSettings, val serverCache: Any?){
 
     fun areConditionsMet(): Boolean{
         return lootSetting.areConditionsMet(serverCache)
+    }
+
+    fun shouldSendPlayer(player: EntityPlayer): Boolean{
+        return lootSetting.shouldSendToClient(player, serverCache)
     }
 
     fun handleLoot(){
@@ -32,5 +37,20 @@ data class ServerLootObject(val entityItem: SimpleEntityItem, val party: IParty,
         if (areConditionsMet()) {
             handleLoot()
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as ServerLootObject
+
+        if (rollID != other.rollID) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        return rollID.hashCode()
     }
 }

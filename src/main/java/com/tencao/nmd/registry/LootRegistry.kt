@@ -6,15 +6,18 @@ import com.google.common.collect.ImmutableMap
 import com.tencao.nmd.api.ILootSettings
 import com.tencao.nmd.api.IRarity
 import com.tencao.nmd.data.ServerLootObject
+import java.util.*
+import kotlin.collections.HashSet
+import kotlin.collections.LinkedHashMap
 
 object LootRegistry {
 
-    val lootdrops = mutableListOf<ServerLootObject>()
+    val lootdrops = mutableSetOf<ServerLootObject>()
 
     private lateinit var registeredLootSettings: ImmutableList<ILootSettings>
     private lateinit var registeredRarity: ImmutableList<IRarity>
     lateinit var defaultLootPairings: ImmutableMap<IRarity, ILootSettings>
-    private val serverLootCache: LinkedHashMap<ILootSettings, Pair<IParty, Any?>> = linkedMapOf()
+    private val serverLootCache: LinkedHashMap<ILootSettings, Pair<Set<UUID>, Any?>> = linkedMapOf()
 
     fun getRegisteredLoot(name: String): ILootSettings {
         return registeredLootSettings.first { it.toString().equals(name, true) }
@@ -30,7 +33,7 @@ object LootRegistry {
         defaultLootPairings = ImmutableMap.copyOf(lootsettings)
     }
 
-    fun getServerLootCache(lootSettings: ILootSettings, party: IParty): Any? {
+    fun getServerLootCache(lootSettings: ILootSettings, party: Set<UUID>): Any? {
         return if (lootSettings.persistentCache()){
             var cache = serverLootCache[lootSettings]?.second
             if (cache == null){
@@ -42,7 +45,7 @@ object LootRegistry {
         else lootSettings.createServerCache(party)
     }
 
-    fun updateServerCache(lootSettings: ILootSettings, party: IParty, cache: Any){
+    fun updateServerCache(lootSettings: ILootSettings, party: Set<UUID>, cache: Any){
         if (lootSettings.persistentCache())
             serverLootCache[lootSettings] = Pair(party, cache)
     }

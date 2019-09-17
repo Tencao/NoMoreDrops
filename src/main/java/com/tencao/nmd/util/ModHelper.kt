@@ -9,4 +9,7 @@ object ModHelper {
 
     val isCustomNPCLoaded
         get() = Loader.isModLoaded("customnpcs")
+
+    val isBlueRPGLoaded
+        get() = Loader.isModLoaded("bluerpg")
 }

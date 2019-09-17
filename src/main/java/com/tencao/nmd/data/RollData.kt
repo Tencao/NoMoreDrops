@@ -37,6 +37,10 @@ data class RollData(val uuid: UUID, var roll: Int = 0): Predicate<EntityPlayer> 
         return roll > 0
     }
 
+    fun hasRolled(): Boolean{
+        return roll != 0
+    }
+
     /**
      * Byte will return 0 if pass, 1 if greed, or 2 if need
      * Roll will be subtracted by 100 when roll is a need

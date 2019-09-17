@@ -34,12 +34,15 @@ object PartyHelper {
      */
     fun sendLootPacket(entityItem: SimpleEntityItem, party: IParty, rarity: IRarity, lootSettings: ISpecialLootSettings, rollID: UUID) {
         //We're adding an additional 20 ticks to compensate for lag during packet sending
-
         val time: Long = FMLCommonHandler.instance().minecraftServerInstance.getWorld(0).totalWorldTime + (NMDConfig.partycfg.LootRollTimer * 20).toLong() + 20L
-        party.membersInfo.mapNotNull(IPlayerInfo::player).forEach {
-            PacketPipeline.sendTo(LootClientPKT(entityItem.simpleStack, NMDConfig.partycfg.LootRollTimer * 20, rollID, rarity, lootSettings), it as EntityPlayerMP)
+        val players = party.membersInfo.filter { it.player != null }
+        val playerSet = players.map { it.player!!.uniqueID }.toSet()
+        val serverLootObject = ServerLootObject(entityItem, playerSet, time, rollID, rarity, lootSettings, LootRegistry.getServerLootCache(lootSettings, playerSet))
+        LootRegistry.lootdrops.add(serverLootObject)
+        players.forEach { iPlayerInfo ->
+            if (serverLootObject.shouldSendPlayer(iPlayerInfo.player!!))
+                PacketPipeline.sendTo(LootClientPKT(entityItem.simpleStack, NMDConfig.partycfg.LootRollTimer * 20, rollID, rarity, lootSettings), iPlayerInfo.player as EntityPlayerMP)
         }
-        LootRegistry.lootdrops.add(ServerLootObject(entityItem, party, time, rollID, lootSettings, LootRegistry.getServerLootCache(lootSettings, party)))
     }
 
     fun addExpToParty(player: EntityPlayer, exp: Int){
