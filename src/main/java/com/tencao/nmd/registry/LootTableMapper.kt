@@ -1,11 +1,11 @@
 package com.tencao.nmd.registry
 
-import com.tencao.nmd.api.IRarity
-import com.tencao.nmd.data.SimpleStack
-import com.tencao.nmd.util.LootTableReflect
 import com.tencao.nmd.DropRarityEnum
 import com.tencao.nmd.NMDCore
+import com.tencao.nmd.api.IRarity
+import com.tencao.nmd.data.SimpleStack
 import com.tencao.nmd.util.CustomRarity
+import com.tencao.nmd.util.LootTableReflect
 import com.tencao.nmd.util.ModHelper
 import net.minecraft.entity.EntityList
 import net.minecraft.entity.EntityLiving
@@ -13,7 +13,6 @@ import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.util.math.MathHelper
 import net.minecraft.util.text.TextComponentString
-import net.minecraft.util.text.TextFormatting
 import net.minecraft.world.World
 import net.minecraft.world.storage.loot.*
 import net.minecraft.world.storage.loot.conditions.LootCondition
@@ -81,26 +80,8 @@ object LootTableMapper {
     }
 
     fun getRarity(stack: ItemStack): IRarity{
-        if (ModHelper.isBlueRPGLoaded && stack.item is be.bluexin.rpg.gear.IRPGGear){
-            stack.getCapability(be.bluexin.rpg.stats.GearStats.Capability, null)?.rarity?.let {
-                when (it.ordinal){
-                    0 -> return DropRarityEnum.COMMON
-                    1 -> return DropRarityEnum.UNCOMMON
-                    2 -> return DropRarityEnum.RARE
-                    3 -> return DropRarityEnum.EPIC
-                    4 -> return DropRarityEnum.LEGENDARY
-                    5 -> return DropRarityEnum.MYTHIC
-                    6 -> return DropRarityEnum.GODLIKE
-                    else -> {}
-                }
-            }
-        }
-        else if (stack.getSubCompound("display") != null){
-            val hasEffect = try {
-                stack.hasEffect()
-            } catch (e: Exception){
-                false
-            }
+        if (stack.getSubCompound("display") != null){
+            val hasEffect = stack.isItemEnchanted
             return CustomRarity(TextComponentString(stack.displayName).style.color, hasEffect)
         }
         return lootDropCache.firstOrNull { it.test(stack) }?.rarity?: DropRarityEnum.UNKNOWN

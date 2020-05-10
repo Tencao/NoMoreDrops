@@ -1,6 +1,7 @@
 package com.tencao.nmd.registry
 
 import be.bluexin.saomclib.party.IParty
+import be.bluexin.saomclib.party.IPartyData
 import com.google.common.collect.ImmutableList
 import com.google.common.collect.ImmutableMap
 import com.tencao.nmd.api.ILootSettings
@@ -17,7 +18,7 @@ object LootRegistry {
     private lateinit var registeredLootSettings: ImmutableList<ILootSettings>
     private lateinit var registeredRarity: ImmutableList<IRarity>
     lateinit var defaultLootPairings: ImmutableMap<IRarity, ILootSettings>
-    private val serverLootCache: LinkedHashMap<ILootSettings, Pair<Set<UUID>, Any?>> = linkedMapOf()
+    private val serverLootCache: LinkedHashMap<ILootSettings, Pair<List<UUID>, Any?>> = linkedMapOf()
 
     fun getRegisteredLoot(name: String): ILootSettings {
         return registeredLootSettings.first { it.toString().equals(name, true) }
@@ -33,7 +34,7 @@ object LootRegistry {
         defaultLootPairings = ImmutableMap.copyOf(lootsettings)
     }
 
-    fun getServerLootCache(lootSettings: ILootSettings, party: Set<UUID>): Any? {
+    fun getServerLootCache(lootSettings: ILootSettings, party: List<UUID>): Any? {
         return if (lootSettings.persistentCache()){
             var cache = serverLootCache[lootSettings]?.second
             if (cache == null){
@@ -45,12 +46,12 @@ object LootRegistry {
         else lootSettings.createServerCache(party)
     }
 
-    fun updateServerCache(lootSettings: ILootSettings, party: Set<UUID>, cache: Any){
+    fun updateServerCache(lootSettings: ILootSettings, party: List<UUID>, cache: Any){
         if (lootSettings.persistentCache())
             serverLootCache[lootSettings] = Pair(party, cache)
     }
 
-    fun removeServerLootCache(party: IParty){
+    fun removeServerLootCache(party: IPartyData){
         serverLootCache.values.removeIf { it.first == party }
     }
 

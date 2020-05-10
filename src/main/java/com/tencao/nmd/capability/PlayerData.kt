@@ -4,16 +4,16 @@ import be.bluexin.saomclib.capabilities.AbstractCapability
 import be.bluexin.saomclib.capabilities.AbstractEntityCapability
 import be.bluexin.saomclib.capabilities.Key
 import be.bluexin.saomclib.capabilities.getPartyCapability
+import be.bluexin.saomclib.onServer
 import be.bluexin.saomclib.packets.PacketPipeline
-import be.bluexin.saomclib.party.IPlayerInfo
-import com.tencao.nmd.api.ILootSettings
-import com.tencao.nmd.api.IRarity
-import com.tencao.nmd.config.NMDConfig
-import com.tencao.nmd.data.SimpleStack
+import be.bluexin.saomclib.party.playerInfo
 import com.tencao.nmd.LootSettingsEnum
 import com.tencao.nmd.NMDCore
-import com.tencao.nmd.gui.LootGUI
+import com.tencao.nmd.api.ILootSettings
+import com.tencao.nmd.api.IRarity
 import com.tencao.nmd.data.ClientLootObject
+import com.tencao.nmd.data.SimpleStack
+import com.tencao.nmd.gui.LootGUI
 import com.tencao.nmd.network.packets.LootSyncAllPKT
 import com.tencao.nmd.network.packets.LootSyncPKT
 import com.tencao.nmd.registry.LootRegistry
@@ -56,7 +56,7 @@ class PlayerData : AbstractEntityCapability() {
     override fun setup(param: Any): AbstractCapability {
         super.setup(param)
         this.player = param as EntityPlayer
-        if (NMDConfig.partycfg.partyModule && !this.player.world.isRemote) {
+        this.player.world.onServer {
             LootRegistry.defaultLootPairings.toMap(lootSettings)
         }
         return this
@@ -93,11 +93,10 @@ class PlayerData : AbstractEntityCapability() {
      * @param sync If true, it will send a sync packet to the server/client
      */
     fun setLootSetting(rarity: IRarity, lootSetting: ILootSettings, sync: Boolean){
-        if (!player.world.isRemote && player.getPartyCapability().getOrCreatePT().isLeader(player)){
-            player.getPartyCapability().getOrCreatePT().membersInfo.mapNotNull(IPlayerInfo::player)
-                    .asSequence()
-                    .filter { it != player }
-                    .forEach {partyMember -> partyMember.getNMDData().setLootSetting(rarity, lootSetting, sync)
+        if (!player.world.isRemote && player.getPartyCapability().partyData?.isLeader(player) == true){
+            player.getPartyCapability().partyData?.membersInfo?.asSequence()
+                    ?.filter { it != player.playerInfo() }
+                    ?.forEach {partyMember -> partyMember.player?.getNMDData()?.setLootSetting(rarity, lootSetting, sync)
             }
         }
         lootSettings.replace(rarity, lootSetting)

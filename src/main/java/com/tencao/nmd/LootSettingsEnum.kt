@@ -1,16 +1,16 @@
 package com.tencao.nmd
 
 import be.bluexin.saomclib.party.IParty
-import be.bluexin.saomclib.party.IPlayerInfo
+import be.bluexin.saomclib.party.IPartyData
 import com.tencao.nmd.api.ILootSettings
 import com.tencao.nmd.api.ISpecialLootSettings
-import com.tencao.nmd.config.NMDConfig
 import com.tencao.nmd.capability.getNMDData
-import com.tencao.nmd.gui.LootGUI
-import com.tencao.nmd.util.PlayerHelper
+import com.tencao.nmd.config.NMDConfig
 import com.tencao.nmd.data.ClientLootObject
 import com.tencao.nmd.data.RollData
 import com.tencao.nmd.data.SimpleEntityItem
+import com.tencao.nmd.gui.LootGUI
+import com.tencao.nmd.util.PlayerHelper
 import io.netty.buffer.ByteBuf
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.ScaledResolution
@@ -29,7 +29,7 @@ enum class LootSettingsEnum: ILootSettings {
         override val displayName: String
             get() = "NONE"
 
-        override fun handleLoot(entityItem: SimpleEntityItem, party: Set<UUID>, serverCache: Any?): Any? {
+        override fun handleLoot(entityItem: SimpleEntityItem, party: List<UUID>, serverCache: Any?): Any? {
             entityItem.spawnEntityPartyItem(party, true)
             return null
         }
@@ -38,7 +38,7 @@ enum class LootSettingsEnum: ILootSettings {
 
         override val displayName: String = "Random"
 
-        override fun handleLoot(entityItem: SimpleEntityItem, party: Set<UUID>, serverCache: Any?) {
+        override fun handleLoot(entityItem: SimpleEntityItem, party: List<UUID>, serverCache: Any?) {
             val partyMembers = getNearbyParty(entityItem, party)
             if (partyMembers.isNotEmpty()) {
                 val stack = entityItem.toStack()
@@ -59,7 +59,7 @@ enum class LootSettingsEnum: ILootSettings {
 
         override val displayName: String = "Round Robin"
 
-        override fun handleLoot(entityItem: SimpleEntityItem, party: Set<UUID>, serverCache: Any?): Any? {
+        override fun handleLoot(entityItem: SimpleEntityItem, party: List<UUID>, serverCache: Any?): Any? {
             val partyMembers = getNearbyParty(entityItem, party)
             var lastMember = serverCache as Int
 
@@ -81,7 +81,7 @@ enum class LootSettingsEnum: ILootSettings {
             return lastMember
         }
 
-        override fun createServerCache(party: Set<UUID>): Int {
+        override fun createServerCache(party: List<UUID>): Int {
             return 0
         }
 
@@ -90,7 +90,7 @@ enum class LootSettingsEnum: ILootSettings {
         }
     };
 
-    fun getNearbyParty(entityItem: SimpleEntityItem, party: Set<UUID>): MutableList<EntityPlayer>{
+    fun getNearbyParty(entityItem: SimpleEntityItem, party: List<UUID>): MutableList<EntityPlayer>{
         return party.map { FMLCommonHandler.instance().minecraftServerInstance.playerList.getPlayerByUUID(it) }.filter {player ->
             player.getNMDData().isBlackListed(entityItem.toStack()) && entityItem.getDistanceSq(player) <= PlayerHelper.squareSum(64)
         }.toMutableList()
@@ -139,7 +139,7 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
             TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
         }
 
-        override fun handleLoot(entityItem: SimpleEntityItem, party: Set<UUID>, serverCache: Any?) {
+        override fun handleLoot(entityItem: SimpleEntityItem, party: List<UUID>, serverCache: Any?) {
 
         }
 
@@ -288,7 +288,7 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
         }
 
         @Suppress("UNCHECKED_CAST")
-        override fun handleLoot(entityItem: SimpleEntityItem, party: Set<UUID>, serverCache: Any?) {
+        override fun handleLoot(entityItem: SimpleEntityItem, party: List<UUID>, serverCache: Any?) {
             val winner = (serverCache as HashSet<RollData>)
                     .asSequence()
                     .filter ( RollData::isRollValid )
@@ -315,11 +315,11 @@ enum class SpecialLootSettingsEnum: ISpecialLootSettings {
             }
         }
 
-        override fun createClientCache(stack: ItemStack, party: IParty): Any? {
+        override fun createClientCache(stack: ItemStack, party: IPartyData): Any? {
             return 0
         }
 
-        override fun createServerCache(party: Set<UUID>): Any? {
+        override fun createServerCache(party: List<UUID>): Any? {
             val rollData = HashSet<RollData>()
             party.forEach {
                 rollData.add(RollData(it))

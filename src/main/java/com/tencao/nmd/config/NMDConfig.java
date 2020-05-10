@@ -13,20 +13,24 @@ public final class NMDConfig {
     public static final PartyConfig partycfg = new PartyConfig();
 
     public static class LootConfig {
-        @Config.Comment("If the looting module should be enabled")
-        public boolean lootModule = true;
 
         @Config.RangeInt(min = 0, max = 100)
         @Config.Comment("Minimum distance needed to automatically pickup the loot")
-        public int distanceForDrop =  4;
+        public int distanceForDrop =  10;
 
         @Config.Comment("If all loot dropped by mobs should drop on the ground instead of auto looted.")
-        public boolean alwaysDropMobLoot = false;
+        public boolean alwaysDropMobLoot = true;
+
+        @Config.Comment("If loot should be distributed based on first hit, or total damage")
+        public boolean firstHit = false;
+
+        @Config.Comment("Should exp be shared by everyone")
+        public boolean expForAll = true;
+
+
     }
 
     public static class PartyConfig {
-        @Config.Comment("If the party module should be enabled")
-        public boolean partyModule = true;
 
         @Config.RangeInt(min = 0, max = 10000)
         @Config.Comment("The time in seconds for each loot roll.")

@@ -50,14 +50,6 @@ repositories {
         url = "http://maven.bluexin.be/repository/snapshots/"
     }
     maven {
-        name = "Bluexin Releases"
-        url = "http://maven.bluexin.be/repository/releases/"
-    }
-    maven {
-        name = "Bluexin Snapshots"
-        url = "http://maven.bluexin.be/repository/snapshots/"
-    }
-    maven {
         name = "Jitpack.io"
         url = uri("https://jitpack.io")
     }
@@ -72,9 +64,7 @@ dependencies {
     compile "net.shadowfacts:Forgelin:${forgelin_version}"
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "be.bluexin:saomc-lib:1.12.2-1.+:deobf"
-    compile("be.bluexin:bluerpg-1.12.2:1.4.3-SNAPSHOT") {
-        exclude group: "deobf.com.fantasticsource.dynamicstealth"
-    }
+    compile "com.teamwizardry.librarianlib:librarianlib-1.12.2:4.19.+"
 }
 
 processResources
@@ -100,6 +90,7 @@ processResources
 idea { module { inheritOutputDirs = true } }
 
 jar {
+    manifest.attributes('FMLAT': 'nmd_at.cfg')
     classifier = 'universal'
 }
 

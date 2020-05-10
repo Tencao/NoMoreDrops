@@ -1,8 +1,12 @@
 package com.tencao.nmd.util
 
+import be.bluexin.saomclib.capabilities.getPartyCapability
+import be.bluexin.saomclib.party.IParty
+import be.bluexin.saomclib.party.IPartyData
 import com.tencao.nmd.capability.getNMDData
 import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.entity.player.EntityPlayerMP
 import net.minecraft.init.SoundEvents
 import net.minecraft.item.ItemStack
 import net.minecraft.stats.StatList
@@ -25,13 +29,30 @@ object PlayerHelper {
         return player is EntityPlayer && player !is FakePlayer
     }
 
+    fun getPlayer(uuid: UUID): EntityPlayerMP? {
+        return FMLCommonHandler.instance().minecraftServerInstance.playerList.getPlayerByUUID(uuid)
+    }
+
+    fun getParty(uuid: UUID): IPartyData? {
+        return getPlayer(uuid)?.getPartyCapability()?.partyData
+    }
+
+    fun getParty(uuids: Sequence<UUID>): IPartyData? {
+        uuids.forEach { uuid ->
+            val party = getPlayer(uuid)?.getPartyCapability()?.partyData
+            if (party != null)
+                return party
+        }
+        return null
+    }
+
     /**
      * @param uuid The player's UUID
      * @param itemStack The ItemStack to attempt to add
      * @param saveSlot If true, will attempt to save one free slot in the players inventory
      */
     fun addDropsToPlayer(uuid: UUID, itemStack: ItemStack, saveSlot: Boolean): Boolean {
-        FMLCommonHandler.instance().minecraftServerInstance.playerList.players.firstOrNull { it.uniqueID == uuid }?.let {player ->
+        getPlayer(uuid)?.let {player ->
             if (!player.getNMDData().isBlackListed(itemStack)) {
                 return giveItemToPlayer(player, itemStack)
             }

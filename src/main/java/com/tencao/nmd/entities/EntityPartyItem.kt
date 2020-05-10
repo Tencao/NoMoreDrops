@@ -1,40 +1,34 @@
 package com.tencao.nmd.entities
 
-import be.bluexin.saomclib.capabilities.getPartyCapability
-import be.bluexin.saomclib.party.PlayerInfo
-import com.tencao.nmd.capability.getNMDData
-import com.tencao.nmd.util.EntityItemReflect
-import com.tencao.nmd.util.PartyHelper
-import com.tencao.nmd.events.handler.LootDropEvent
 import com.tencao.nmd.data.SimpleEntityItem
-import com.tencao.nmd.events.handler.PartyLootEvent
-import com.tencao.nmd.registry.LootTableMapper
+import com.tencao.nmd.util.EntityItemReflect
+import com.tencao.nmd.util.LootHelper
+import com.tencao.nmd.util.PartyHelper
 import net.minecraft.entity.item.EntityItem
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
 import net.minecraft.stats.StatList
 import net.minecraft.world.World
-import net.minecraftforge.common.MinecraftForge
 import java.util.*
 
 class EntityPartyItem: EntityItem {
 
-    val owners: Set<UUID>
+    val owners: List<UUID>
     val hasRolled: Boolean
 
-    constructor(world: World, uuid: Set<UUID>, hasRolled: Boolean): super(world){
+    constructor(world: World, uuid: List<UUID>, hasRolled: Boolean): super(world){
         this.setPickupDelay(40)
         this.owners = uuid
         this.hasRolled = hasRolled
     }
 
-    constructor(world: World, x: Double, y: Double, z: Double, uuid: Set<UUID>, hasRolled: Boolean): super(world, x, y, z){
+    constructor(world: World, x: Double, y: Double, z: Double, uuid: List<UUID>, hasRolled: Boolean): super(world, x, y, z){
         this.setPickupDelay(40)
         this.owners = uuid
         this.hasRolled = hasRolled
     }
 
-    constructor(world: World, x: Double, y: Double, z: Double, stack: ItemStack, uuid: Set<UUID>, hasRolled: Boolean): super(world, x, y, z, stack){
+    constructor(world: World, x: Double, y: Double, z: Double, stack: ItemStack, uuid: List<UUID>, hasRolled: Boolean): super(world, x, y, z, stack){
         this.setPickupDelay(40)
         this.owners = uuid
         this.hasRolled = hasRolled
@@ -55,10 +49,7 @@ class EntityPartyItem: EntityItem {
                 }
                 else if (owners.contains(entityIn.uniqueID)){
                     if (PartyHelper.isValidParty(entityIn)) {
-                        val party = entityIn.getPartyCapability().party!!
-                        val rarity = LootTableMapper.getRarity(this.item)
-                        val lootSettings = party.leaderInfo!!.player!!.getNMDData().getLootSetting(rarity)
-                        MinecraftForge.EVENT_BUS.post(PartyLootEvent(SimpleEntityItem(this), entityIn.getPartyCapability().party!!, lootSettings, rarity))
+                        LootHelper.handleLoot(SimpleEntityItem(this), owners)
                         this.setDead()
                     } else {
                         addStackToPlayer(entityIn)

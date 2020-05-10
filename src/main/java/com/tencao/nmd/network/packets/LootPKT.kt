@@ -59,7 +59,7 @@ class LootClientPKT(): IMessage {
             override fun handleClientPacket(player: EntityPlayer, message: LootClientPKT, ctx: MessageContext, mainThread: IThreadListener): IMessage? {
                 mainThread.addScheduledTask {
                     val nmdData = player.getNMDData()
-                    val clientLootObject = ClientLootObject(message.simpleStack, message.rollID, message.timer, message.rarity, message.lootSetting, message.lootSetting.createClientCache(message.simpleStack.stack, player.getPartyCapability().getOrCreatePT()))
+                    val clientLootObject = ClientLootObject(message.simpleStack, message.rollID, message.timer, message.rarity, message.lootSetting, message.lootSetting.createClientCache(message.simpleStack.stack, player.getPartyCapability().partyData?: return@addScheduledTask))
                     nmdData.lootDrops.add(clientLootObject)
                     LootGUI.calculateXY(clientLootObject)
                 }
@@ -98,7 +98,7 @@ class LootServerPKT(): IMessage {
         class Handler : AbstractServerPacketHandler<LootServerPKT>(){
             override fun handleServerPacket(player: EntityPlayer, message: LootServerPKT, ctx: MessageContext, mainThread: IThreadListener): IMessage? {
                 mainThread.addScheduledTask {
-                    LootRegistry.lootdrops.firstOrNull { it.rollID == message.rollID }?.processClientData(player, message.cache)
+                    LootRegistry.lootdrops.asIterable().firstOrNull { it.rollID == message.rollID }?.processClientData(player, message.cache)
                 }
                 return null
             }

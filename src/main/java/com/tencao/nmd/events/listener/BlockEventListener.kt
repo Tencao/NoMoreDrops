@@ -1,19 +1,14 @@
 package com.tencao.nmd.events.listener
 
 import be.bluexin.saomclib.capabilities.getPartyCapability
-import com.tencao.nmd.util.EntityLivingReflect
+import com.tencao.nmd.data.ExplosionData
+import com.tencao.nmd.data.SimpleEntityItem
+import com.tencao.nmd.util.LootHelper
 import com.tencao.nmd.util.PartyHelper
 import com.tencao.nmd.util.PlayerHelper
-import com.tencao.nmd.data.ExplosionData
-import com.tencao.nmd.events.handler.LootDropEvent
-import com.tencao.nmd.DropRarityEnum
-import com.tencao.nmd.capability.getNMDData
-import com.tencao.nmd.data.SimpleEntityItem
-import com.tencao.nmd.registry.LootTableMapper
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.inventory.IInventory
 import net.minecraft.item.ItemStack
-import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.event.world.BlockEvent
 import net.minecraftforge.event.world.ExplosionEvent
 import net.minecraftforge.fml.common.eventhandler.EventPriority
@@ -26,12 +21,10 @@ object BlockEventListener {
     fun onBlockDrops(e: BlockEvent.HarvestDropsEvent) {
         if (!e.world.isRemote && PlayerHelper.isPlayer(e.harvester)) {
             e.drops.removeAll{ PlayerHelper.addDropsToPlayer(e.harvester, it, false) && it.isEmpty}
-            val party = e.harvester.getPartyCapability().party
+            val party = e.harvester.getPartyCapability().partyData
             if (PartyHelper.isValidParty(party)){
                 e.drops.forEach { stack ->
-                    val rarity = LootTableMapper.getRarity(stack)
-                    val lootSettings = party!!.leaderInfo!!.player!!.getNMDData().getLootSetting(rarity)
-                    MinecraftForge.EVENT_BUS.post(LootDropEvent(SimpleEntityItem(stack, e.pos, e.world), e.harvester, DropRarityEnum.UNKNOWN, lootSettings, true))
+                    LootHelper.sortLoot(SimpleEntityItem(stack, e.pos, e.world), party!!.membersInfo.filter { it.uuid == e.harvester.uniqueID }.map { it.uuid })
                 }
                 e.drops.clear()
             }
@@ -67,7 +60,7 @@ object BlockEventListener {
             var player: EntityPlayer? = null
             if (entity is EntityPlayer) player = entity
             else if (entity != null)
-                player = EntityLivingReflect.getCombatEntries(entity).asSequence()
+                player = entity.combatTracker.combatEntries.asSequence()
                         .filter{ PlayerHelper.isPlayer(it.damageSrc.trueSource)}
                         .map { it.damageSrc.trueSource as EntityPlayer }.firstOrNull()
 

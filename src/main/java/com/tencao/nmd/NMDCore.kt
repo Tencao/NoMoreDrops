@@ -29,7 +29,7 @@ import kotlin.random.Random
 object NMDCore {
     const val MODID = "nmd"
     const val NAME = "No More Drops"
-    const val VERSION = "0.6.1"
+    const val VERSION = "0.7.2"
     const val DEPS = "required-after:saomclib@[1.2,)"
     val LOGGER: Logger = LogManager.getLogger(MODID)
     val rand = Random

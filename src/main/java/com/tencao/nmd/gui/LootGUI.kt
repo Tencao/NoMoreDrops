@@ -2,24 +2,25 @@ package com.tencao.nmd.gui
 
 import be.bluexin.saomclib.capabilities.getPartyCapability
 import be.bluexin.saomclib.packets.PacketPipeline
-import com.tencao.nmd.NMDCore
+import be.bluexin.saomclib.packets.party.PTUpdateServerPKT
+import be.bluexin.saomclib.packets.party.PartyType
+import be.bluexin.saomclib.packets.party.Type
+import be.bluexin.saomclib.packets.party.updateServer
 import com.tencao.nmd.api.ISpecialLootSettings
 import com.tencao.nmd.capability.getNMDData
+import com.tencao.nmd.data.ClientLootObject
 import com.tencao.nmd.gui.buttons.GUILootButton
 import com.tencao.nmd.network.packets.LootServerPKT
 import com.tencao.nmd.network.packets.LootSyncPKT
+import com.tencao.nmd.registry.LootRegistry
 import com.tencao.nmd.util.GUIScreenReflect
 import com.tencao.nmd.util.ModHelper
 import com.tencao.nmd.util.PartyHelper
-import com.tencao.nmd.data.ClientLootObject
-import com.tencao.nmd.registry.LootRegistry
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiButton
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.client.gui.ScaledResolution
-import net.minecraft.client.gui.toasts.GuiToast
 import net.minecraft.client.resources.I18n
-import net.minecraftforge.client.event.MouseEvent
 import net.minecraftforge.client.event.RenderGameOverlayEvent
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
 import org.lwjgl.input.Mouse
@@ -53,7 +54,7 @@ object LootGUI : GuiScreen() {
         buttons.add(GuiButton(4, (sr.scaledWidth / 2) - 75, (sr.scaledHeight / 2), 150, 20, I18n.format("nmd.pt.kick")))
         buttons.add(GuiButton(5, (sr.scaledWidth / 2) - 75, (sr.scaledHeight / 2) + 21, 150, 20, I18n.format("nmd.pt.disband")))
         buttons.subList(2, 6).forEach { it.visible = false }
-        buttons.subList(4, 6).forEach { it.enabled = mc.player.getPartyCapability().getOrCreatePT().isLeader(mc.player) }
+        buttons.subList(4, 6).forEach { it.enabled = mc.player.getPartyCapability().partyData?.isLeader(mc.player) == true }
         var count = 0
         mc.player.getNMDData().lootSettings.forEach { (rarity, lootsetting) ->
             val button = GUILootButton(rarity, lootsetting, 5 + ++count, (sr.scaledWidth / 2) - 75, (sr.scaledHeight / 2) - 70 + (21 * count), 150, 20)
@@ -151,7 +152,7 @@ object LootGUI : GuiScreen() {
                         buttons[2].visible = true
                         if (PartyHelper.isValidParty(mc.player)) {
                             buttons[3].visible = true
-                            if (mc.player.getPartyCapability().getOrCreatePT().leaderInfo?.player == mc.player) {
+                            if (mc.player.getPartyCapability().partyData?.leaderInfo?.player == mc.player) {
                                 buttons[4].visible = true
                                 buttons[5].visible = true
                             } else return@run
@@ -161,14 +162,14 @@ object LootGUI : GuiScreen() {
                 2 -> {
                     //TODO Add party invite function
                 }
-                3 -> mc.player.getPartyCapability().getOrCreatePT().removeMember(mc.player)
-                4 -> mc.player.getPartyCapability().getOrCreatePT().dissolve()
+                3 -> Type.LEAVE.updateServer(PartyType.MAIN)
+                4 -> Type.DISBAND.updateServer(PartyType.MAIN)
                 5 -> {
                     //TODO Add party kick function
                 }
 
                 else -> {
-                    if (mc.player.getPartyCapability().getOrCreatePT().isLeader(mc.player)) {
+                    if (mc.player.getPartyCapability().partyData?.isLeader(mc.player) == true) {
                         if (this is GUILootButton) {
                             var lootSetting = this.lootSetting
                             lootSetting = LootRegistry.getNextLootSetting(lootSetting)

@@ -2,76 +2,54 @@ package com.tencao.nmd.events.listener
 
 import be.bluexin.saomclib.capabilities.PartyCapability
 import be.bluexin.saomclib.capabilities.getPartyCapability
-import be.bluexin.saomclib.events.PartyEventV2
 import be.bluexin.saomclib.onServer
-import be.bluexin.saomclib.packets.PacketPipeline
-import be.bluexin.saomclib.party.IPlayerInfo
-import com.tencao.nmd.api.ISpecialLootSettings
 import com.tencao.nmd.config.NMDConfig
-import com.tencao.nmd.DropRarityEnum
-import com.tencao.nmd.LootSettingsEnum
-import com.tencao.nmd.NMDCore
-import com.tencao.nmd.SpecialLootSettingsEnum
-import com.tencao.nmd.capability.getNMDData
-import com.tencao.nmd.events.listener.LivingDeathListener.cache
-import com.tencao.nmd.util.PlayerHelper
 import com.tencao.nmd.data.SimpleEntityItem
-import com.tencao.nmd.events.handler.LootDropEvent
-import com.tencao.nmd.events.handler.PartyLootEvent
-import com.tencao.nmd.events.handler.RegisterLootRarityEvent
-import com.tencao.nmd.network.packets.LootClientPKT
-import com.tencao.nmd.network.packets.LootSyncAllPKT
-import com.tencao.nmd.registry.LootRegistry
-import com.tencao.nmd.registry.LootTableMapper
+import com.tencao.nmd.util.LootHelper
 import com.tencao.nmd.util.PartyHelper
-import net.minecraft.entity.player.EntityPlayerMP
-import net.minecraftforge.common.MinecraftForge
+import com.tencao.nmd.util.PlayerHelper
+import net.minecraft.entity.EntityLivingBase
+import net.minecraft.entity.player.EntityPlayer
 import net.minecraftforge.event.entity.living.LivingDropsEvent
 import net.minecraftforge.event.entity.living.LivingExperienceDropEvent
-import net.minecraftforge.event.world.WorldEvent
+import net.minecraftforge.fml.common.FMLCommonHandler
 import net.minecraftforge.fml.common.eventhandler.EventPriority
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent
-import net.minecraftforge.fml.common.gameevent.PlayerEvent
-import net.minecraftforge.fml.common.gameevent.TickEvent
+import java.util.*
 
 object DropEventListener {
+
+    private val expCache: HashMap<UUID, List<UUID>> = hashMapOf()
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     fun onLivingDrop(event: LivingDropsEvent) {
         val mob = event.entityLiving?: return
-        if (!mob.world.isRemote && cache.containsKey(mob.uniqueID)) {
-            val player = cache[mob.uniqueID].first()
-            val party = player.getPartyCapability().party
-            NMDCore.LOGGER.info(party?.membersInfo.toString())
-            if (PartyHelper.isValidParty(party)) {
-                if (NMDConfig.lootcfg.alwaysDropMobLoot) {
+
+        val players = getPlayers(mob)
+
+        mob.world.onServer {
+            when {
+                players.count() == 1 ->
                     event.drops.removeIf { entityItem ->
-                        val entity = SimpleEntityItem(entityItem)
-                        val rarity = LootTableMapper.getRarity(entityItem.item)
-                        MinecraftForge.EVENT_BUS.post(LootDropEvent(entity, party?.leaderInfo?.player
-                                ?: player, rarity, LootSettingsEnum.None, true))
+                        if (NMDConfig.lootcfg.alwaysDropMobLoot)
+                            SimpleEntityItem(entityItem).spawnEntityPartyItem(players, false)
+                        else
+                            LootHelper.sortLoot(entityItem, players.first())
                         true
                     }
-                } else {
-                    val leaderNMDData = party?.leaderInfo?.player?.getNMDData() ?: player.getNMDData()
+                players.count() > 1 ->
                     event.drops.removeIf { entityItem ->
-                        val entity = SimpleEntityItem(entityItem)
-                        val rarity = LootTableMapper.getRarity(entityItem.item)
-                        if (NMDConfig.lootcfg.lootModule && player.getDistanceSq(event.entityLiving) <= PlayerHelper.squareSum(NMDConfig.lootcfg.distanceForDrop.toDouble())) {
-                            MinecraftForge.EVENT_BUS.post(LootDropEvent(entity, player, rarity, leaderNMDData.getLootSetting(rarity), false))
-                            true
-                        } else {
-                            MinecraftForge.EVENT_BUS.post(LootDropEvent(entity, player, rarity, leaderNMDData.getLootSetting(rarity), true))
-                            true
-                        }
-
+                        if (NMDConfig.lootcfg.alwaysDropMobLoot)
+                            SimpleEntityItem(entityItem).spawnEntityPartyItem(players, false)
+                        else
+                            LootHelper.sortLoot(entityItem, players)
+                        true
                     }
-                }
-            } else {
-                event.drops.removeIf { entityItem ->
-                    val rarity = LootTableMapper.getRarity(entityItem.item)
-                    MinecraftForge.EVENT_BUS.post(LootDropEvent(SimpleEntityItem(entityItem), player, rarity, LootSettingsEnum.None, NMDConfig.lootcfg.alwaysDropMobLoot || player.getDistanceSq(event.entityLiving) > PlayerHelper.squareSum(NMDConfig.lootcfg.distanceForDrop.toDouble())))
-                    true
+                else -> {
+                    event.drops.removeIf { entityItem ->
+                        SimpleEntityItem(entityItem).spawnEntityItem()
+                        true
+                    }
                 }
             }
 
@@ -81,140 +59,73 @@ object DropEventListener {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     fun onLivingExpDrop(event: LivingExperienceDropEvent) {
-        val mob = event.entityLiving?: return
-        if (!mob.world.isRemote && cache.containsKey(mob.uniqueID)){
-            cache[mob.uniqueID].forEach { player ->
-                val party = player.getCapability(PartyCapability.CAP_INSTANCE, null)!!.getOrCreatePT()
+        val mob = event.entityLiving ?: return
+        val players = getExpCache(mob.uniqueID)
+        mob.world.onServer {
+            players.forEach { UUID ->
+                val player = FMLCommonHandler.instance().minecraftServerInstance.playerList.getPlayerByUUID(UUID)
+                val party = player.getPartyCapability().partyData
                 if (PartyHelper.isValidParty(party)) {
-                    PartyHelper.addExpToParty(player, event.droppedExperience / cache[mob.uniqueID].size)
+                    PartyHelper.addExpToParty(player, event.droppedExperience / players.count())
                 } else {
-                    player.addExperience(event.droppedExperience / cache[mob.uniqueID].size)
+                    player.addExperience(event.droppedExperience / players.count())
                 }
             }
+
             event.droppedExperience = 0
             event.isCanceled = true
-            cache.removeAll(mob.uniqueID)
+
         }
     }
 
-}
+    fun getPlayers(mob: EntityLivingBase): List<UUID>{
+        val combatEntries = mob.combatTracker.combatEntries.asSequence()
+                .filter{ PlayerHelper.isPlayer(it.damageSrc.trueSource)}
 
 
-object LootRegisterListener {
+        val players: List<UUID>
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    fun registerLootRarity(event: RegisterLootRarityEvent){
-        event.registerLootRarity(DropRarityEnum.UNKNOWN, SpecialLootSettingsEnum.NeedOrGreed)
-        event.registerLootRarity(DropRarityEnum.COMMON, SpecialLootSettingsEnum.NeedOrGreed)
-        event.registerLootRarity(DropRarityEnum.UNCOMMON, SpecialLootSettingsEnum.NeedOrGreed)
-        event.registerLootRarity(DropRarityEnum.RARE, SpecialLootSettingsEnum.NeedOrGreed)
-        event.registerLootRarity(DropRarityEnum.EPIC, SpecialLootSettingsEnum.NeedOrGreed)
-        event.registerLootRarity(DropRarityEnum.LEGENDARY, SpecialLootSettingsEnum.NeedOrGreed)
-        event.registerLootRarity(DropRarityEnum.MYTHIC, SpecialLootSettingsEnum.NeedOrGreed)
-        event.registerLootRarity(DropRarityEnum.GODLIKE, SpecialLootSettingsEnum.NeedOrGreed)
-        event.registerLootSettings(LootSettingsEnum.Random)
-        event.registerLootSettings(LootSettingsEnum.RoundRobin)
-
-        LootRegistry.registerDefaults(event.getLootSettings(), event.getLootOptions(), event.getRarities())
-        event.isCanceled = true
-    }
-}
-
-object PartyEventListener {
-
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    fun onLootDrop(event: LootDropEvent){
-        val party = event.player.getPartyCapability().party
-        if (PartyHelper.isValidParty(party) && event.lootSettings != LootSettingsEnum.None) {
-            if (event.isDrop)
-                event.entityItem.spawnEntityPartyItem(party!!, !event.isDrop)
-            else {
-                val leaderNMDData = party!!.leaderInfo!!.player!!.getNMDData()
-                val lootSetting = leaderNMDData.getLootSetting(event.dropRarity)
-                MinecraftForge.EVENT_BUS.post(PartyLootEvent(event.entityItem, party, lootSetting, event.dropRarity))
-            }
+        // ****** Handle Loot share ******
+        if (NMDConfig.lootcfg.firstHit) {
+            val player: EntityPlayer = combatEntries.first().damageSrc.trueSource as EntityPlayer
+            players = player.getPartyCapability().partyData?.membersInfo?.map { it.uuid }?: listOf(player.uniqueID)
         }
         else {
-            if (event.isDrop)
-                event.entityItem.spawnEntityPartyItem(event.player, false)
-            else
-                PlayerHelper.addDropsToPlayer(event.player, event.entityItem.toStack(), false)
+            val set: MutableMap<Sequence<UUID>, Float> = mutableMapOf()
+            combatEntries
+                    .forEach { combatEntry ->
+                        val player: EntityPlayer = combatEntry.damageSrc.trueSource as EntityPlayer
+                        val players = player.getPartyCapability().partyData?.membersInfo?.map { it.uuid }?.asSequence()?: sequenceOf(player.uniqueID)
+                        set[players] = set[players]?: 0f + combatEntry.damageAmount
+                    }
+            players = set.maxBy { it.value }?.key?.toList()?: emptyList()
         }
-        event.isCanceled = true
-    }
 
-
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    fun onPartyJoin(event: PartyEventV2.Join){
-        event.player.player?.getNMDData()?.setLootSetting(event.party!!.leaderInfo?.player!!.getNMDData().lootSettings)
-    }
-
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    fun onPartyLeave(event: PartyEventV2.Leave){
-        event.player.player?.getNMDData()?.resetLootSettings()
-    }
-
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    fun onPartyDisband(event: PartyEventV2.Disbanded){
-        event.party?.membersInfo?.mapNotNull(IPlayerInfo::player)?.forEach { it.getNMDData().resetLootSettings() }
-        LootRegistry.removeServerLootCache(event.party!!)
-    }
-
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    fun onPartyLoot(event: PartyLootEvent){
-        val players = event.party.membersInfo.filter { it.player != null }.map { it.uuid }.toSet()
-        if (event.lootSetting is ISpecialLootSettings)
-            PartyHelper.sendLootPacket(event.entityItem, event.party, event.dropRarity, event.lootSetting as ISpecialLootSettings, event.rollID)
-        else {
-            event.lootSetting.handleLoot(event.entityItem, players, LootRegistry.getServerLootCache(event.lootSetting, players))?.let { cache ->
-                LootRegistry.updateServerCache(event.lootSetting, players, cache)
+        // ****** Handle Exp share ******
+        if (NMDConfig.lootcfg.expForAll) {
+            val list = mutableListOf<UUID>()
+            combatEntries.forEach { entry ->
+                val player = (entry.damageSrc.trueSource as EntityPlayer)
+                list.addAll(player.getPartyCapability().partyData?.membersInfo?.map { it.uuid }?: listOf(player.uniqueID))
             }
+            expCache[mob.uniqueID] = list
         }
-        event.isCanceled = true
-    }
-}
+        else
+            expCache[mob.uniqueID] = players
 
-object PlayerEventListener {
+        return players
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    fun onPlayerTick(event: TickEvent.PlayerTickEvent){
-        if (event.phase == TickEvent.Phase.END) {
-            event.player.getNMDData().tickLoot()
-            BlockEventListener.explosionCache.removeIf {
-                it.timer-- <= 0 || it.blocks.isEmpty()
-            }
-        }
     }
 
-    @SubscribeEvent
-    fun onPlayerConnect(e: PlayerEvent.PlayerLoggedInEvent){
-        PacketPipeline.sendTo(LootSyncAllPKT(e.player.getNMDData().lootSettings), e.player as EntityPlayerMP)
-
-        e.player.world.onServer {
-            LootRegistry.lootdrops.forEach {
-                if (it.party.contains(e.player.uniqueID) && it.shouldSendPlayer(e.player)) {
-                    PacketPipeline.sendTo(LootClientPKT(it.entityItem.simpleStack, (it.tickTime - e.player.world.totalWorldTime).toInt() - 20, it.rollID, it.rarity, it.lootSetting), e.player as EntityPlayerMP)
-                }
-            }
-        }
-    }
-}
-
-object WorldEventListener {
-
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    fun onWorldTick(event: TickEvent.WorldTickEvent){
-        if (event.phase == TickEvent.Phase.END)
-            if (!event.world.isRemote) {
-                if (event.world.provider.dimension == 0) {
-                    LootRegistry.lootdrops.asSequence().filter { it.tickTime <= event.world.totalWorldTime }.forEach { it.handleLoot() }
-                }
-            }
+    fun getExpCache(mob: UUID): List<UUID>{
+        return expCache.remove(mob)?: emptyList()
     }
 
-    @SubscribeEvent(priority = EventPriority.LOWEST)
-    fun onWorldLoad(event: WorldEvent.Load){
-        if (event.world.provider.dimension == 0)
-            LootTableMapper.generateCache(event.world)
+    fun resetData(mob: EntityLivingBase){
+        // ****** Ensure all old combat data is reset here ******
+        mob.combatTracker.combatEntries.clear()
+        mob.combatTracker.lastDamageTime = mob.combatTracker.fighter.ticksExisted - 500
+        mob.combatTracker.reset()
     }
+
 }

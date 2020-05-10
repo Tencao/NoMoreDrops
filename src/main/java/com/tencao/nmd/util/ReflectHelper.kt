@@ -5,7 +5,6 @@ import net.minecraft.entity.EntityLiving
 import net.minecraft.entity.EntityLivingBase
 import net.minecraft.entity.item.EntityItem
 import net.minecraft.item.Item
-import net.minecraft.util.CombatEntry
 import net.minecraft.util.CombatTracker
 import net.minecraft.util.ResourceLocation
 import net.minecraft.world.storage.loot.*
@@ -24,7 +23,7 @@ object EntityLivingReflect {
 
     private val getCombatEntries: Field = ReflectionHelper.findField(CombatTracker::class.java, "field_94556_a", "combatEntries")
 
-    fun getCombatEntries(instance: EntityLivingBase): List<CombatEntry> { return getCombatEntries.get(instance.combatTracker) as List<CombatEntry> }
+    //fun getCombatEntries(instance: EntityLivingBase): MutableList<CombatEntry> { return getCombatEntries.get(instance.combatTracker) as MutableList<CombatEntry> }
 }
 
 @Suppress("UNCHECKED_CAST")

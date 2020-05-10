@@ -8,7 +8,6 @@ interface IProxy {
     fun registerKeyBinds(){}
 
     fun registerEvents(){
-        MinecraftForge.EVENT_BUS.register(LivingDeathListener)
         MinecraftForge.EVENT_BUS.register(BlockEventListener)
         MinecraftForge.EVENT_BUS.register(DropEventListener)
         MinecraftForge.EVENT_BUS.register(EntityItemEventListener)

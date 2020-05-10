@@ -42,7 +42,7 @@ enum class CommandList: NMDCommandBase {
 
         override fun checkPermission(server: MinecraftServer, sender: ICommandSender): Boolean {
             val player = if (PlayerHelper.isPlayer(sender.commandSenderEntity)) sender.commandSenderEntity as EntityPlayer else return false
-            return player.getPartyCapability().getOrCreatePT().isLeader(player)
+            return player.getPartyCapability().partyData == null || player.getPartyCapability().partyData?.isLeader(player) == true
         }
 
         override fun execute(server: MinecraftServer, sender: ICommandSender, params: Array<String>) {
