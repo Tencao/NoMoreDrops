@@ -2,6 +2,7 @@ package com.tencao.nmd.events.listener
 
 import be.bluexin.saomclib.onServer
 import be.bluexin.saomclib.packets.PacketPipeline
+import be.bluexin.saomclib.party.playerInfo
 import com.tencao.nmd.capability.getNMDData
 import com.tencao.nmd.network.packets.LootClientPKT
 import com.tencao.nmd.network.packets.LootSyncAllPKT
@@ -30,7 +31,7 @@ object PlayerEventListener {
 
         e.player.world.onServer {
             LootRegistry.lootdrops.asIterable().forEach {
-                if (it.party.contains(e.player.uniqueID) && it.shouldSendPlayer(e.player)) {
+                if (it.party.contains(e.player.playerInfo()) && it.shouldSendPlayer(e.player)) {
                     PacketPipeline.sendTo(LootClientPKT(it.entityItem.simpleStack, (it.tickTime - e.player.world.totalWorldTime).toInt() - 20, it.rollID, it.rarity, it.lootSetting), e.player as EntityPlayerMP)
                 }
             }

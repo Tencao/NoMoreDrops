@@ -1,7 +1,7 @@
 package com.tencao.nmd.api
 
-import be.bluexin.saomclib.party.IParty
 import be.bluexin.saomclib.party.IPartyData
+import be.bluexin.saomclib.party.PlayerInfo
 import com.tencao.nmd.data.ClientLootObject
 import com.tencao.nmd.data.SimpleEntityItem
 import com.tencao.nmd.gui.LootGUI
@@ -37,12 +37,12 @@ interface ILootSettings {
      * @param serverCache The cache object, only present on ISpecialLoot
      * @return Returns the updated cache back, null if no changes
      */
-    fun handleLoot(entityItem: SimpleEntityItem, party: List<UUID>, serverCache: Any?): Any?
+    fun handleLoot(entityItem: SimpleEntityItem, party: List<PlayerInfo>, serverCache: Any?): Any?
 
     /**
      * Creates a new server cache instance for the loot drop.
      */
-    fun createServerCache(party: List<UUID>): Any?{
+    fun createServerCache(party: List<PlayerInfo>): Any?{
         return null
     }
 

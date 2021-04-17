@@ -94,7 +94,7 @@ class PlayerData : AbstractEntityCapability() {
      */
     fun setLootSetting(rarity: IRarity, lootSetting: ILootSettings, sync: Boolean){
         if (!player.world.isRemote && player.getPartyCapability().partyData?.isLeader(player) == true){
-            player.getPartyCapability().partyData?.membersInfo?.asSequence()
+            player.getPartyCapability().partyData?.getMembers()?.asSequence()
                     ?.filter { it != player.playerInfo() }
                     ?.forEach {partyMember -> partyMember.player?.getNMDData()?.setLootSetting(rarity, lootSetting, sync)
             }

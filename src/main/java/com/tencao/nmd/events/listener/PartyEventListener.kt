@@ -21,8 +21,8 @@ object PartyEventListener {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     fun onPartyDisband(event: PartyEvent.Disbanded){
-        event.partyData.membersInfo.mapNotNull(PlayerInfo::player).forEach { it.getNMDData().resetLootSettings() }
-        LootRegistry.removeServerLootCache(event.partyData!!)
+        event.partyData.getMembers().mapNotNull(PlayerInfo::player).forEach { it.getNMDData().resetLootSettings() }
+        LootRegistry.removeServerLootCache(event.partyData)
     }
 
 }

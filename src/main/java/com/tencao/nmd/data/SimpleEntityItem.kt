@@ -1,9 +1,14 @@
 package com.tencao.nmd.data
 
-import be.bluexin.saomclib.party.IParty
 import be.bluexin.saomclib.party.IPartyData
+import be.bluexin.saomclib.party.PlayerInfo
+import be.bluexin.saomclib.party.playerInfo
 import com.teamwizardry.librarianlib.features.helpers.setNBTBoolean
+import com.teamwizardry.librarianlib.features.helpers.setNBTInt
 import com.teamwizardry.librarianlib.features.helpers.setNBTList
+import com.tencao.nmd.DropRarityEnum
+import com.tencao.nmd.api.IRarity
+import com.tencao.nmd.registry.LootRegistry
 import com.tencao.nmd.util.Constants
 import net.minecraft.entity.Entity
 import net.minecraft.entity.item.EntityItem
@@ -15,7 +20,7 @@ import net.minecraft.util.math.BlockPos
 import net.minecraft.world.World
 import java.util.*
 
-data class SimpleEntityItem(val simpleStack: SimpleStack, val pos: BlockPos, val world: World) {
+data class SimpleEntityItem(val simpleStack: SimpleStack, val pos: BlockPos, val world: World, var rarity: IRarity = DropRarityEnum.COMMON) {
 
     constructor(itemStack: ItemStack, pos: BlockPos, world: World): this(SimpleStack(itemStack), pos, world)
 
@@ -36,7 +41,7 @@ data class SimpleEntityItem(val simpleStack: SimpleStack, val pos: BlockPos, val
      * @param hasRolled = If true, item has already been rolled.
      */
     fun spawnEntityPartyItem(party: IPartyData, hasRolled: Boolean){
-        world.spawnEntity(setupData(party.membersInfo.map { it.uuid }, hasRolled))
+        world.spawnEntity(setupData(party.getMembers().toList(), hasRolled))
 
         //world.spawnEntity(EntityPartyItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), toStack(), party.membersInfo.filter { it.player != null }.map { it.uuid }, hasRolled))
     }
@@ -45,8 +50,8 @@ data class SimpleEntityItem(val simpleStack: SimpleStack, val pos: BlockPos, val
      * Used to drop the loot item while still assigning the loot to players
      * @param hasRolled = If true, item has already been rolled.
      */
-    fun spawnEntityPartyItem(uuid: UUID, hasRolled: Boolean){
-        world.spawnEntity(setupData(listOf(uuid), hasRolled))
+    fun spawnEntityPartyItem(playerInfo: PlayerInfo, hasRolled: Boolean){
+        world.spawnEntity(setupData(listOf(playerInfo), hasRolled))
 
         //world.spawnEntity(EntityPartyItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), toStack(), sequenceOf(uuid), hasRolled))
     }
@@ -55,8 +60,8 @@ data class SimpleEntityItem(val simpleStack: SimpleStack, val pos: BlockPos, val
      * Used to drop the loot item while still assigning the loot to players
      * @param hasRolled = If true, item has already been rolled.
      */
-    fun spawnEntityPartyItem(party: List<UUID>, hasRolled: Boolean){
-        world.spawnEntity(setupData(party.toList(), hasRolled))
+    fun spawnEntityPartyItem(party: List<PlayerInfo>, hasRolled: Boolean){
+        world.spawnEntity(setupData(party, hasRolled))
         //world.spawnEntity(EntityPartyItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), toStack(), party, hasRolled))
     }
 
@@ -64,7 +69,7 @@ data class SimpleEntityItem(val simpleStack: SimpleStack, val pos: BlockPos, val
      * Used to drop the loot item while still assigning the loot to players
      * @param hasRolled = If true, item has already been rolled.
      */
-    fun spawnEntityPartyItem(party: Set<UUID>, hasRolled: Boolean){
+    fun spawnEntityPartyItem(party: Set<PlayerInfo>, hasRolled: Boolean){
         world.spawnEntity(setupData(party.toList(), hasRolled))
         //world.spawnEntity(EntityPartyItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), toStack(), party.asSequence(), hasRolled))
     }
@@ -74,20 +79,21 @@ data class SimpleEntityItem(val simpleStack: SimpleStack, val pos: BlockPos, val
      * @param hasRolled = If true, item has already been rolled.
      */
     fun spawnEntityPartyItem(player: EntityPlayer, hasRolled: Boolean){
-        world.spawnEntity(setupData(listOf(player.uniqueID), hasRolled))
+        world.spawnEntity(setupData(listOf(player.playerInfo()), hasRolled))
         //world.spawnEntity(EntityPartyItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), toStack(), sequenceOf(player.uniqueID), hasRolled))
     }
 
-    private fun setupData(party: List<UUID>, hasRolled: Boolean): EntityItem{
+    private fun setupData(party: List<PlayerInfo>, hasRolled: Boolean): EntityItem{
         val stack = toStack()
         if (!hasRolled) {
             val tagList = NBTTagList()
             party.forEach { player ->
                 val tag = NBTTagCompound()
-                tag.setString(Constants.uuid, player.toString())
+                tag.setString(Constants.uuid, player.uuidString)
                 tagList.appendTag(tag)
             }
             stack.setNBTList(Constants.partyData, tagList)
+            stack.setNBTInt(Constants.rarity, LootRegistry.registeredRarity.indexOf(rarity))
         }
         stack.setNBTBoolean(Constants.ignoreData, true)
         return EntityItem(world, pos.x.toDouble(), pos.y.toDouble(), pos.z.toDouble(), stack)

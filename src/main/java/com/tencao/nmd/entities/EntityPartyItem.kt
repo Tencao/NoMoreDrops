@@ -1,5 +1,9 @@
 package com.tencao.nmd.entities
 
+import be.bluexin.saomclib.party.PlayerInfo
+import be.bluexin.saomclib.party.playerInfo
+import com.tencao.nmd.LootSettingsEnum
+import com.tencao.nmd.api.ILootSettings
 import com.tencao.nmd.data.SimpleEntityItem
 import com.tencao.nmd.util.EntityItemReflect
 import com.tencao.nmd.util.LootHelper
@@ -10,25 +14,26 @@ import net.minecraft.item.ItemStack
 import net.minecraft.stats.StatList
 import net.minecraft.world.World
 import java.util.*
-
+/*
 class EntityPartyItem: EntityItem {
 
-    val owners: List<UUID>
+    val owners: List<PlayerInfo>
     val hasRolled: Boolean
+    val lootSetting: ILootSettings
 
-    constructor(world: World, uuid: List<UUID>, hasRolled: Boolean): super(world){
+    constructor(world: World, uuid: List<PlayerInfo>, hasRolled: Boolean): super(world){
         this.setPickupDelay(40)
         this.owners = uuid
         this.hasRolled = hasRolled
     }
 
-    constructor(world: World, x: Double, y: Double, z: Double, uuid: List<UUID>, hasRolled: Boolean): super(world, x, y, z){
+    constructor(world: World, x: Double, y: Double, z: Double, uuid: List<PlayerInfo>, hasRolled: Boolean): super(world, x, y, z){
         this.setPickupDelay(40)
         this.owners = uuid
         this.hasRolled = hasRolled
     }
 
-    constructor(world: World, x: Double, y: Double, z: Double, stack: ItemStack, uuid: List<UUID>, hasRolled: Boolean): super(world, x, y, z, stack){
+    constructor(world: World, x: Double, y: Double, z: Double, stack: ItemStack, uuid: List<PlayerInfo>, hasRolled: Boolean): super(world, x, y, z, stack){
         this.setPickupDelay(40)
         this.owners = uuid
         this.hasRolled = hasRolled
@@ -47,7 +52,7 @@ class EntityPartyItem: EntityItem {
                 if (hasRolled){
                     addStackToPlayer(entityIn)
                 }
-                else if (owners.contains(entityIn.uniqueID)){
+                else if (owners.contains(entityIn.playerInfo())){
                     if (PartyHelper.isValidParty(entityIn)) {
                         LootHelper.handleLoot(SimpleEntityItem(this), owners)
                         this.setDead()
@@ -79,4 +84,4 @@ class EntityPartyItem: EntityItem {
             entityIn.addStat(StatList.getObjectsPickedUpStats(item)!!, i)
         }
     }
-}
+}*/

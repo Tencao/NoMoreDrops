@@ -2,7 +2,6 @@ package com.tencao.nmd.gui
 
 import be.bluexin.saomclib.capabilities.getPartyCapability
 import be.bluexin.saomclib.packets.PacketPipeline
-import be.bluexin.saomclib.packets.party.PTUpdateServerPKT
 import be.bluexin.saomclib.packets.party.PartyType
 import be.bluexin.saomclib.packets.party.Type
 import be.bluexin.saomclib.packets.party.updateServer

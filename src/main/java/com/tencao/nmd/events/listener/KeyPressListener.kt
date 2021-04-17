@@ -14,8 +14,8 @@ object KeyPressListener{
 
     @SubscribeEvent
     fun onClientTick(event: TickEvent.ClientTickEvent){
-        ClientKeyHelper.mcToNmd.asSequence().firstOrNull { it.key.isKeyDown }?.let {
-            if (it.key.keyDescription == Keybinds.LOOT_GUI.keyName)
+        ClientKeyHelper.mcToNmd.keys.firstOrNull { it.isKeyDown }?.let {
+            if (it.keyDescription == Keybinds.LOOT_GUI.keyName)
                 Minecraft.getMinecraft().displayGuiScreen(LootGUI)
         }
     }

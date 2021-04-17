@@ -6,7 +6,6 @@ import com.tencao.nmd.api.IRarity
 import com.tencao.nmd.data.SimpleStack
 import com.tencao.nmd.util.CustomRarity
 import com.tencao.nmd.util.LootTableReflect
-import com.tencao.nmd.util.ModHelper
 import net.minecraft.entity.EntityList
 import net.minecraft.entity.EntityLiving
 import net.minecraft.item.Item
@@ -56,14 +55,14 @@ object LootTableMapper {
 
         lootPools.forEach { pool ->
             val lootEntries = LootTableReflect.getLootEntries(pool)
-            val totalWeight = lootEntries.asSequence().sumBy { entry -> entry.getEffectiveWeight(0f) }.toFloat()
+            val totalWeight = lootEntries.sumBy { entry -> entry.getEffectiveWeight(0f) }.toFloat()
             val poolConditions = LootTableReflect.getPoolConditions(pool)
             lootEntries.asSequence()
                     .filter{ entry -> entry is LootEntryItem }.map{ entry -> entry as LootEntryItem }
                     .map{ entry -> LootCacheEntry(LootTableReflect.getItem(entry), 0, entry.getEffectiveWeight(0f) / totalWeight, LootTableReflect.getConditions(entry), LootTableReflect.getFunctions(entry)) }
                     .map{ drop -> drop.addLootConditions(poolConditions) }
                     .forEach{ drop ->
-                        val search = lootDropCache.asSequence().firstOrNull { it.test(drop.toStack()) }
+                        val search = lootDropCache.firstOrNull { it.test(drop.toStack()) }
                         if (search != null) {
                             if (search > drop) {
                                 lootDropCache.remove(search)
@@ -112,7 +111,7 @@ object LootConditionHelper {
     }
 }
 
-class LootCacheEntry(val stack: SimpleStack, var rarity: IRarity?): Predicate<ItemStack>, Comparable<LootCacheEntry>{
+class LootCacheEntry(val stack: SimpleStack, var rarity: IRarity = DropRarityEnum.COMMON): Predicate<ItemStack>, Comparable<LootCacheEntry>{
     var min = 1
     var max = 1
     var chance: Float = 0f

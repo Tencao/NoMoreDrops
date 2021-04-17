@@ -1,5 +1,7 @@
 package com.tencao.nmd.data
 
+import be.bluexin.saomclib.party.PlayerInfo
+import be.bluexin.saomclib.party.playerInfo
 import net.minecraft.entity.player.EntityPlayer
 import java.util.*
 import java.util.function.Predicate
@@ -7,10 +9,10 @@ import kotlin.random.Random
 
 /**
  * The Roll Data for loot rolls
- * @param uuid The players unique id
+ * @param player The players info panel
  * @param roll The Loot Roll
  */
-data class RollData(val uuid: UUID, var roll: Int = 0): Predicate<EntityPlayer> {
+data class RollData(val playerInfo: PlayerInfo, var roll: Int = 0): Predicate<EntityPlayer> {
 
     fun roll(type: Int){
         when (type){
@@ -50,6 +52,6 @@ data class RollData(val uuid: UUID, var roll: Int = 0): Predicate<EntityPlayer> 
     }
 
     override fun test(player: EntityPlayer): Boolean {
-        return uuid == player.uniqueID
+        return playerInfo == player.playerInfo()
     }
 }

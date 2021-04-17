@@ -31,7 +31,6 @@ minecraft {
     version = "${mc_version}-${forge_version}"
     runDir = "run"
     mappings = "${mappings_version}"
-
 }
 
 repositories {
@@ -64,7 +63,7 @@ dependencies {
     compile "net.shadowfacts:Forgelin:${forgelin_version}"
     compile "org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version"
     compile "be.bluexin:saomc-lib:1.12.2-1.+:deobf"
-    compile "com.teamwizardry.librarianlib:librarianlib-1.12.2:4.19.+"
+    compile "com.teamwizardry.librarianlib:librarianlib-1.12.2:4.+"
 }
 
 processResources
@@ -90,7 +89,6 @@ processResources
 idea { module { inheritOutputDirs = true } }
 
 jar {
-    manifest.attributes('FMLAT': 'nmd_at.cfg')
     classifier = 'universal'
 }
 

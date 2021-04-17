@@ -1,11 +1,14 @@
 package com.tencao.nmd.events.listener
 
+import be.bluexin.saomclib.capabilities.getBlockRecords
 import be.bluexin.saomclib.capabilities.getPartyCapability
+import be.bluexin.saomclib.party.playerInfo
 import com.tencao.nmd.data.ExplosionData
 import com.tencao.nmd.data.SimpleEntityItem
 import com.tencao.nmd.util.LootHelper
 import com.tencao.nmd.util.PartyHelper
 import com.tencao.nmd.util.PlayerHelper
+import com.tencao.nmd.util.getCombatEntries
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.inventory.IInventory
 import net.minecraft.item.ItemStack
@@ -21,12 +24,14 @@ object BlockEventListener {
     fun onBlockDrops(e: BlockEvent.HarvestDropsEvent) {
         if (!e.world.isRemote && PlayerHelper.isPlayer(e.harvester)) {
             e.drops.removeAll{ PlayerHelper.addDropsToPlayer(e.harvester, it, false) && it.isEmpty}
-            val party = e.harvester.getPartyCapability().partyData
-            if (PartyHelper.isValidParty(party)){
-                e.drops.forEach { stack ->
-                    LootHelper.sortLoot(SimpleEntityItem(stack, e.pos, e.world), party!!.membersInfo.filter { it.uuid == e.harvester.uniqueID }.map { it.uuid })
+            if (!e.world.getChunk(e.pos).getBlockRecords().isBlockModified(e.pos)) {
+                val party = e.harvester.getPartyCapability().partyData
+                if (PartyHelper.isValidParty(party)) {
+                    e.drops.forEach { stack ->
+                        LootHelper.sortLoot(SimpleEntityItem(stack, e.pos, e.world), party!!.getMembers().filter { it == e.harvester.playerInfo() })
+                    }
+                    e.drops.clear()
                 }
-                e.drops.clear()
             }
         }
     }
@@ -60,7 +65,7 @@ object BlockEventListener {
             var player: EntityPlayer? = null
             if (entity is EntityPlayer) player = entity
             else if (entity != null)
-                player = entity.combatTracker.combatEntries.asSequence()
+                player = entity.combatTracker.getCombatEntries().asSequence()
                         .filter{ PlayerHelper.isPlayer(it.damageSrc.trueSource)}
                         .map { it.damageSrc.trueSource as EntityPlayer }.firstOrNull()
 

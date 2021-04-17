@@ -1,12 +1,11 @@
 package com.tencao.nmd.events.listener
 
-import com.teamwizardry.librarianlib.features.helpers.getNBTBoolean
-import com.teamwizardry.librarianlib.features.helpers.getNBTList
-import com.teamwizardry.librarianlib.features.helpers.hasNBTEntry
-import com.teamwizardry.librarianlib.features.helpers.removeNBTEntry
+import be.bluexin.saomclib.party.PlayerInfo
+import be.bluexin.saomclib.party.playerInfo
+import com.teamwizardry.librarianlib.features.helpers.*
 import com.tencao.nmd.config.NMDConfig
 import com.tencao.nmd.data.SimpleEntityItem
-import com.tencao.nmd.entities.EntityPartyItem
+import com.tencao.nmd.registry.LootRegistry
 import com.tencao.nmd.util.Constants
 import com.tencao.nmd.util.LootHelper
 import net.minecraft.entity.item.EntityItem
@@ -22,24 +21,26 @@ object EntityItemEventListener {
 
     @SubscribeEvent(priority = EventPriority.LOWEST)
     fun entityItemSpawnEvent(e: EntityJoinWorldEvent){
-        if (!e.world.isRemote && e.entity is EntityItem && e.entity !is EntityPartyItem) {
+        if (!e.world.isRemote && e.entity is EntityItem) {
             val entityItem = e.entity as EntityItem
+            if (entityItem.item.getNBTBoolean(Constants.ignoreData)) return
             val distance = NMDConfig.lootcfg.distanceForDrop
             val players = e.world.getEntitiesWithinAABB(EntityPlayer::class.java, AxisAlignedBB(e.entity.position.add(-distance, -distance, -distance), e.entity.position.add(distance, distance, distance)))
             if (players.isEmpty()) return
-            if (entityItem.item.getNBTBoolean(Constants.ignoreData)) return
+            if (players.any { isDeadZone(it.getDistanceSq(entityItem)) }) return
+            players.filter { it.canEntityBeSeen(entityItem) }
             if (entityItem.thrower.isNullOrBlank()){
                 if (entityItem.owner.isNullOrEmpty() && entityItem.thrower.isNullOrBlank()) {
                     (BlockEventListener.explosionCache.asIterable().firstOrNull { it.test(e.entity.position) })?.let {
                         if (it.player != null){
-                            LootHelper.sortLoot(entityItem, it.player.uniqueID)
+                            LootHelper.sortLoot(entityItem, it.player.playerInfo())
                         }
                         e.isCanceled = true
                         return
                     }
                     players.minBy { it.getDistance(e.entity) }?.let { player ->
                         if (!isDeadZone(player.getDistanceSq(entityItem))){
-                            LootHelper.sortLoot(entityItem, player.uniqueID)
+                            LootHelper.sortLoot(entityItem, player.playerInfo())
                             e.isCanceled = true
                         }
 
@@ -48,7 +49,7 @@ object EntityItemEventListener {
                 else {
                     players.find { it.name == entityItem.owner }?.let {player ->
                         if (!isDeadZone(player.getDistanceSq(entityItem))){
-                            LootHelper.sortLoot(entityItem, player.uniqueID)
+                            LootHelper.sortLoot(entityItem, player.playerInfo())
                             e.isCanceled = true
                         }
                     }
@@ -56,6 +57,7 @@ object EntityItemEventListener {
             }
         }
     }
+
 
     /**
      * This is the distance from the player where typically thrown items are spawned
@@ -71,15 +73,19 @@ object EntityItemEventListener {
     fun onEntityPickUp(e: EntityItemPickupEvent) {
         if (e.item.item.hasNBTEntry(Constants.partyData)) {
             e.item.item.getNBTList(Constants.partyData, 10)?.let { tagList ->
-                val party = mutableSetOf<UUID>()
+                val party = mutableSetOf<PlayerInfo>()
                 for (i in 0 until tagList.count()) {
                     val tag = tagList.getCompoundTagAt(i)
-                    party.add(UUID.fromString(tag.getString(Constants.uuid)))
+                    party.add(PlayerInfo(UUID.fromString(tag.getString(Constants.uuid))))
                 }
-                if (party.any { e.entityPlayer.uniqueID == it }) {
+                if (party.any { it == e.entityPlayer.playerInfo() }) {
                     e.item.item.removeNBTEntry(Constants.partyData)
                     e.item.item.removeNBTEntry(Constants.ignoreData)
-                    LootHelper.handleLoot(SimpleEntityItem(e.item as EntityItem), party.toList())
+                    val rarity = e.item.item.getNBTInt(Constants.rarity)
+                    e.item.item.removeNBTEntry(Constants.rarity)
+                    val simpleEntityItem = SimpleEntityItem(e.item as EntityItem)
+                    simpleEntityItem.rarity = LootRegistry.registeredRarity[rarity]
+                    LootHelper.handleLoot(simpleEntityItem, party.toList())
                     e.item.setDead()
                 }
                 e.isCanceled = true
@@ -88,6 +94,7 @@ object EntityItemEventListener {
         else {
             e.item.item.removeNBTEntry(Constants.partyData)
             e.item.item.removeNBTEntry(Constants.ignoreData)
+            e.item.item.removeNBTEntry(Constants.rarity)
         }
     }
 }

@@ -16,7 +16,7 @@ object PartyHelper {
     }
 
     fun addExpToParty(player: EntityPlayer, exp: Int){
-        val selectedMembers = player.getPartyCapability().partyData?.membersInfo?.mapNotNull(PlayerInfo::player)?.filter { player.getDistanceSq(it) <= PlayerHelper.squareSum(128) }?: listOf(player)
+        val selectedMembers = player.getPartyCapability().partyData?.getMembers()?.mapNotNull(PlayerInfo::player)?.filter { player.getDistanceSq(it) <= PlayerHelper.squareSum(128) }?: listOf(player)
         val givenExp = exp / selectedMembers.count()
         selectedMembers.forEach { it.addExperience(givenExp) }
     }
